@@ -88,6 +88,31 @@ function check_tigerastatus {
                 echo -e "\n"
 
 }
-kubeVersion
-validate_cluster_pod_cidr
-check_tigerastatus
+
+function check_es_pv_status {
+                echo "-------Checking Elasticsearch PV bound status-------"
+                echo -e "\n"
+                bound_status=`kubectl get pv | grep 'tigera-elasticsearch' | awk '{print $5}'`
+                if [ "$bound_status" == "Bound" ]
+                then
+                        echo "Elasticsearch PV is bounded"
+                else
+                        echo "Elasticsearch PV is not bouded"
+                fi
+                echo -e "\n"
+}
+
+function tigera_namespaces {
+#       tigera_namespaces=(tigera-compliance tigera-eck-operator tigera-elasticsearch tigera-fluentd tigera-intrusion-detection  tigera-kibana  tigera-manager tigera-operator tigera-prometheus tigera-system)
+        echo "-------- Checking if all Tigera specific namespaces are present -------"
+        echo -e "\n"
+        tigera_namespaces=`kubectl get ns | grep tigera | wc -l`
+        if [ "$tigera_namespaces" == "10" ]
+        then
+                echo "All tigera namespaces are present"
+        else
+                echo "All Tigera namespaces are not present"
+        fi
+        echo -e "\n"
+
+}
