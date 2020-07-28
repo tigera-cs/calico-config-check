@@ -116,3 +116,9 @@ function tigera_namespaces {
         echo -e "\n"
 
 }
+
+kubeVersion
+validate_cluster_pod_cidr
+check_tigerastatus
+check_es_pv_status
+tigera_namespaces
