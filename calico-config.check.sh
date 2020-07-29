@@ -117,8 +117,31 @@ function tigera_namespaces {
 
 }
 
+function check_apiserver_status {
+        echo "-------Checking kube-apiserver and tigera-apiserver status-------"
+        echo -e "\n"
+        tigera_apiserver=`kubectl get po -l k8s-app=tigera-apiserver -n tigera-system | awk 'NR==2{print $3}'`
+        kube_apiserver=`kubectl get po -l component=kube-apiserver -n kube-system | awk 'NR==2{print $3}'`
+        if [ "$kube_apiserver" == "Running" ]
+        then 
+                echo "kube-apiserver pod is $kube_apiserver"
+        elif [ "$kube_apiserver" ! "Running" ]
+        then
+                echo "kube-apiserver pod is $kube_apiserver"
+        fi
+        if [ "$tigera_apiserver" == "Running" ]
+        then
+                echo "tigera-apiserver pod is $tigera_apiserver"
+        elif [ "$tigera_apiserver" ! "Running" ]
+        then
+                echo "tigera-apiserver pod is $tigera_apiserver"
+        fi
+        echo -e "\n"
+}
+
 kubeVersion
 validate_cluster_pod_cidr
 check_tigerastatus
 check_es_pv_status
 tigera_namespaces
+check_apiserver_status
