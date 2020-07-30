@@ -2,11 +2,22 @@
 Tool for verifying Calico Enterprise installation and configuration
 
 ## How to use
-'''
-git clone <repo>
-cd calico-config-check
-chmod +x <>
-mv <> <PATH>
-'''
 
-Now you can run kubectl <>
+#### 1. Clone the repository
+#### 2. Make sure your .kube/config is present in $HOME, else change the `kubeconfig` variable in script to point to desrired location.
+#### 3. ./calico-cluster-check.sh
+
+### Checks performed
+
+```
+check_kube_config
+check_kubeVersion
+check_cluster_pod_cidr
+check_tigerastatus
+check_es_pv_status
+check_tigera_namespaces
+check_apiserver_status
+check_calico_pods
+check_tigera_pods
+check_tier
+```
