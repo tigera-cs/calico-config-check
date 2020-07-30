@@ -3,9 +3,9 @@ Tool for verifying Calico Enterprise installation and configuration
 
 ## How to use
 
-#### 1. Clone the repository
-#### 2. Make sure your .kube/config is present in $HOME, else change the `kubeconfig` variable in script to point to desrired location.
-#### 3. ./calico-cluster-check.sh
+ 1. Clone the repository
+ 2. Make sure your .kube/config is present in $HOME, else change the `kubeconfig` variable in script to point to desrired location.
+ 3. ./calico-cluster-check.sh
 
 ### Checks performed
 
