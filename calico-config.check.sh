@@ -17,7 +17,7 @@ function check_kube_config {
         else
                 echo -e "$RED kubeconfig does not exits at $kubeconfig $NC, if your kubeconfig is at other location, change the kubeconfig variable path above in the script"
                 echo -e "\n"
-                echo -e "------Exisiting out of script------"
+                echo -e "------Exisiting out of script-------"
                 echo -e "\n"
                 exit 0
         fi
