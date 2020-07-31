@@ -2,12 +2,15 @@
 
 grep_filter="grep -i error"
 RED='\033[0;31m'
+GREEN='\033[0;32m'
 NC='\033[0m'
 kubeconfig=$HOME/.kube/config
+failure_array=()
+success_array=()
+
 
 function check_kube_config {
         echo -e "-------Checking and exporting kubconfig-------"
-        echo -e "\n"
         if [ -f $kubeconfig ]
         then
                  echo -e "kubeconfig exists at $kubeconfig."
@@ -26,32 +29,32 @@ function check_kube_config {
 }
 function check_kubeVersion {
                 echo -e "-------Checking Kubernetes Client and Server version-------"
-                echo -e "\n"
                 client_version=`kubectl version --short | awk 'NR==1{print $3}'`
                 server_version=`kubectl version --short | awk 'NR==2{print $3}'`
                 echo -e "The client version is $client_version"
                 echo -e "The server version is $server_version\n"
+                echo -e "\n"
 
-           }
+}
 
 function check_cluster_pod_cidr {
                 echo -e "-------Checking Cluster and Pod CIDRs-------"
-                echo -e "\n"
                 cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
                 pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
                 if [ "$cluster_cidr" == "$pod_cidr" ]
                 then
                         echo -e "The Cluster CIDR and Pod CIDR match, current Cluster CIDR is $cluster_cidr and Pod CIDR is $pod_cidr"
+                        success_array+=("$GREEN Cluster CIDR check passed $NC")
                 else
 
                         echo -e "$RED Please make sure the Cluter and Pod CIDR match $NC, current Cluster CIDR is $cluster_cidr and Pod CIDR is $pod_cidr"
+                        failure_array+=("$RED Cluster CIDR check failed $NC")
                 fi
                 echo -e "\n"
 }
 
 function check_tigerastatus {
                 echo -e "-------Checking Tigera Components-------"
-                echo -e "\n"
                 tigera_components=(apiserver calico compliance intrusion-detection log-collector log-storage manager)
                 for i in "${tigera_components[@]}"
                 do
@@ -59,9 +62,11 @@ function check_tigerastatus {
                         if [ "$available" == "True"  ]
                         then
                                 echo -e "$i status is $available"
+                                success_array+=("$GREEN ${i} is available  $NC")
                         elif [ "$available" == "False"  ]
                         then
                                 echo -e "$RED $i status is $available $NC"
+                                failure_array+=("$RED ${i} is not available $NC")
                         fi
                 done
                 echo -e "\n"
@@ -70,83 +75,91 @@ function check_tigerastatus {
 
 function check_es_pv_status {
                 echo -e "-------Checking Elasticsearch PV bound status-------"
-                echo -e "\n"
                 bound_status=`kubectl get pv | grep 'tigera-elasticsearch' | awk '{print $5}'`
                 if [ "$bound_status" == "Bound" ]
                 then
                         echo -e "Elasticsearch PV is bounded"
+                        success_array+=("$GREEN Elasticsearch PV is bounded $NC")
                 else
                         echo -e "$RED Elasticsearch PV is not bouded $NC"
+                        failure_array+=("$RED Elasticsearch PV is not bouded $NC")
                 fi
                 echo -e "\n"
 }
 
 function check_tigera_namespaces {
-#       tigera_namespaces=(tigera-compliance tigera-eck-operator tigera-elasticsearch tigera-fluentd tigera-intrusion-detection  tigera-kibana  tigera-manager tigera-operator tigera-prometheus tigera-system)
-        echo -e "-------- Checking if all Tigera specific namespaces are present -------"
-        echo -e "\n"
-        tigera_namespaces=`kubectl get ns | grep tigera | wc -l`
-        if [ "$tigera_namespaces" == "10" ]
-        then
-                echo -e "All tigera namespaces are present"
-        else
-                echo -e "$RED All Tigera namespaces are not present $NC"
-        fi
-        echo -e "\n"
+                echo -e "-------- Checking if all Tigera specific namespaces are present -------"
+                tigera_namespaces=`kubectl get ns | grep tigera | wc -l`
+                if [ "$tigera_namespaces" == "10" ]
+                then
+                        echo -e "All tigera namespaces are present"
+                        success_array+=("$GREEN All tigera namespaces are present $NC")
+                else
+                        echo -e "$RED All Tigera namespaces are not present $NC"
+                        ailure_array+=("$RED All Tigera namespaces are not present $NC")
+                fi
+                echo -e "\n"
 
 }
 
 function check_apiserver_status {
-        echo -e "-------Checking kube-apiserver and tigera-apiserver status-------"
-        echo -e "\n"
-        tigera_apiserver=`kubectl get po -l k8s-app=tigera-apiserver -n tigera-system | awk 'NR==2{print $3}'`
-        kube_apiserver=`kubectl get po -l component=kube-apiserver -n kube-system | awk 'NR==2{print $3}'`
-        if [ "$kube_apiserver" == "Running" ]
-        then 
-                echo -e "kube-apiserver pod is $kube_apiserver"
-        elif [ "$kube_apiserver" ! "Running" ]
-        then
-                echo -e "$RED kube-apiserver pod is $kube_apiserver $NC"
-        fi
-        if [ "$tigera_apiserver" == "Running" ]
-        then
-                echo -e "tigera-apiserver pod is $tigera_apiserver"
-        elif [ "$tigera_apiserver" ! "Running" ]
-        then
-                echo -e "$RED tigera-apiserver pod is $tigera_apiserver $NC"
-        fi
-        echo -e "\n"
+                echo -e "-------Checking kube-apiserver and tigera-apiserver status-------"
+                tigera_apiserver=`kubectl get po -l k8s-app=tigera-apiserver -n tigera-system | awk 'NR==2{print $3}'`
+                kube_apiserver=`kubectl get po -l component=kube-apiserver -n kube-system | awk 'NR==2{print $3}'`
+                if [ "$kube_apiserver" == "Running" ]
+                then 
+                        echo -e "kube-apiserver pod is $kube_apiserver"
+                        success_array+=("$GREEN kube-apiserver pod is $kube_apiserver $NC")
+                elif [ "$kube_apiserver" ! "Running" ]
+                then
+                        echo -e "$RED kube-apiserver pod is $kube_apiserver $NC"
+                        failure_array+=("$RED kube-apiserver pod is $kube_apiserver $NC")
+                fi
+                        if [ "$tigera_apiserver" == "Running" ]
+                then
+                        echo -e "tigera-apiserver pod is $tigera_apiserver"
+                        success_array+=("$GREEN tigera-apiserver pod is $tigera_apiserver $NC")
+                elif [ "$tigera_apiserver" ! "Running" ]
+                then
+                        echo -e "$RED tigera-apiserver pod is $tigera_apiserver $NC"
+                        failure_array+=("$RED tigera-apiserver pod is $tigera_apiserver $NC")
+                fi
+                echo -e "\n"
 }
 
 function check_calico_pods {
-        echo -e "-------Checking calico-node deamonset status-------"
-        echo -e "\n"
-        desired_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $2}'`
-        current_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $3}'`
-        ready_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $4}'`
-        uptodate_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $5}'`
-        available_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $6}'`
-        if [ "$desired_pod_count" == "$current_pod_count" ] && [ "$desired_pod_count" == "$ready_pod_count" ] && [ "$desired_pod_count" == "$uptodate_pod_count" ] && [ "$desired_pod_count" == "$available_pod_count"  ]
-        then
-                echo -e "calico-node deamonset is up to date, desired pods are $desired_pod_count and current pods are $current_pod_count"
-        else
-                echo -e "$RED calico-node deamonset is not up to date, desired pods are $desired_pod_count and current pods are $current_pod_count $NC"
+                echo -e "-------Checking calico-node deamonset status-------"
+                desired_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $2}'`
+                current_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $3}'`
+                ready_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $4}'`
+                uptodate_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $5}'`
+                available_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $6}'`
+                if [ "$desired_pod_count" == "$current_pod_count" ] && [ "$desired_pod_count" == "$ready_pod_count" ] && [ "$desired_pod_count" == "$uptodate_pod_count" ] && [ "$desired_pod_count" == "$available_pod_count"  ]
+                then
+                        echo -e "calico-node deamonset is up to date, desired pods are $desired_pod_count and current pods are $current_pod_count"
+                        success_array+=("$GREEN calico-node deamonset is up to date $NC")
+                else
+                        echo -e "$RED calico-node deamonset is not up to date, desired pods are $desired_pod_count and current pods are $current_pod_count $NC"
+                        failure_array+=("$RED calico-node deamonset is not up to date $NC")
 
-        fi
-        echo -e "\n"
-        echo -e "-------Checking calico-node pod logs-------"
-        echo -e "\n"
-        kubectl logs -l k8s-app=calico-node -n calico-system | $grep_filter >> calico_node_logs
-        [ -s calico_node_logs ]
-        if [ $? == 0 ]
-        then
-                cp calico_node_logs /tmp/
-                echo -e "$RED Error logs found, logs present in file /tmp/calico_node_logs $NC"
-                rm calico_node_logs
-        else
-                echo -e "No errors found"
-        fi
-        echo -e "\n"
+                fi
+                echo -e "\n"
+                echo -e "-------Checking calico-node pod logs-------"
+                kubectl logs -l k8s-app=calico-node -n calico-system | $grep_filter >> calico_node_error_logs
+                [ -s calico_node_error_logs ]
+                if [ $? == 0 ]
+                then
+                        cp calico_node_error_logs /tmp/
+                        echo -e "$RED Error logs found, logs present in file /tmp/calico_node_logs $NC"
+                        failure_array+=("$RED calico-node : Error logs found, logs present in file /tmp/calico_node_logs $NC")
+                        rm calico_node_error_logs
+                else
+                        echo -e "No errors found in calico-node pods"
+
+                fi
+                echo "Complete calico-node logs are dumped at /tmp/calico_node_logs"
+                kubectl logs -l k8s-app=calico-node -n calico-system >> /tmp/calico_node_logs
+                echo -e "\n"
 
 }
 
@@ -158,16 +171,17 @@ function check_tigera_pods {
                 kubectl get po -n $i -l k8s-app=$i -o wide
                 echo -e "\n"
                 echo -e "-------Checking $i pod logs-------"
-                echo -e "\n"
-                kubectl logs -n $i -l k8s-app=$i -c $i | $grep_filter  >> $i
-                [ -s $i ]
+                kubectl logs -n $i -l k8s-app=$i -c $i | $grep_filter  >> ${i}_error_logs
+                [ -s ${i}_error_logs ]
                 if [ $? == 0 ]
                 then
-                        cp $i /tmp/
-                        echo -e "$RED Error logs found, logs present in file /tmp/$i $NC"
-                        rm $i
+                        cp ${i}_error_logs /tmp/
+                        echo -e "$RED Error logs found, logs present in file /tmp/${i}_error_logs $NC"
+                        failure_array+=("$RED ${i} : Error logs found, logs present in file /tmp/ /tmp/${i}_error_logs $NC")
+                        rm ${i}_error_logs
                 else
-                        echo -e "No errors found"
+                        kubectl logs -n $i -l k8s-app=$i -c $i >> /tmp/${i}_logs
+                        echo -e "No errors found in ${i}, logs present at /tmp/${i}_logs"
                 fi
                 echo -e "\n"
         done
@@ -175,51 +189,61 @@ function check_tigera_pods {
         kubectl get po -n tigera-kibana -l k8s-app=tigera-secure -o wide
         echo -e "\n"
         echo -e "-------Checking tigera-kibana pod logs-------"
-        echo -e "\n"
-        kubectl logs -n tigera-kibana -l k8s-app=tigera-secure | $grep_filter  >> tigera-secure
-        [ -s tigera-secure ]
+        kubectl logs -n tigera-kibana -l k8s-app=tigera-secure | $grep_filter  >> tigera_secure_error_logs
+        [ -s tigera_secure_error_logs ]
         if [ $? == 0 ]
         then
-                cp tigera-secure /tmp/
-                echo -e "$RED Error logs found, logs present in file /tmp/tigera-secure $NC"
-                rm tigera-secure
+                cp tigera_secure_error_logs /tmp/
+                echo -e "$RED Error logs found, logs present in file /tmp/tigera_secure_error_logs $NC"
+                failure_array+=("$RED tigera-secure : tigera-secure Error logs found, logs present in file /tmp/tigera_secure_error_logs $NC")
+                rm tigera_secure_error_logs
         else
-                 echo -e "No errors found"
+                kubectl logs -n tigera-kibana -l k8s-app=tigera-secure >> /tmp/tigera_secure_logs
+                echo -e "No errors found in tigera_secure, logs present at /tmp/tigera_secure_logs"
         fi
         echo -e "\n"
         echo -e "-------tigera-fluentd pod status-------"
         kubectl get po -n tigera-fluentd -l k8s-app=fluentd-node -o wide
         echo -e "\n"
         echo -e "-------Checking tigera-fluentd pod logs-------"
-        echo -e "\n"
-        kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node | $grep_filter  >> fluentd-node
-        [ -s fluentd-node ]
+        kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node | $grep_filter  >> fluentd_node_error_logs
+        [ -s fluentd_node_error_logs ]
         if [ $? == 0 ]
         then
-                cp fluentd-node /tmp/
-                echo -e "$RED Error logs found, logs present in file /tmp/fluentd-node $NC"
-                rm fluentd-node
+                cp fluentd_node_error_logs /tmp/
+                echo -e "$RED Error logs found, logs present in file /tmp/fluentd_node_error_logs $NC"
+                rm fluentd_node_error_logs
         else
-                 echo -e "No errors found"
+                 kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node >> /tmp/fluentd_node_logs
+                 echo -e "No errors found in fluentd-node, logs present at /tmp/fluentd_node_logs"
         fi
         echo -e "\n"
-
-
-
-
 }
 
 function check_tier {
         echo -e "-------checking allow-tigera tier-------"
-        echo -e "\n"
         tier_name=`kubectl get tier allow-tigera | awk 'NR==2{print $1}'`
         if [ "$tier_name" == "allow-tigera" ]
         then
                 echo -e "Tier allow-tigera  is present"
+                success_array+=("$GREEN Tier allow-tigera  is present $NC")
+
         else
                 echo -e "$RED Check if tier allow-tigera is created $NC"
+                failure_array+=("$RED Check if tier allow-tigera is created $NC")
         fi
         echo -e "\n"
+}
+
+function display_summary {
+        echo -e "--------Summary of execution--------"
+        echo -e "Success results"
+        ( IFS=$'\n'; echo -e "${success_array[*]}")
+        echo -e "\n"
+        echo -e "Failed results"
+        ( IFS=$'\n'; echo -e  "${failure_array[*]}")
+
+
 }
 
 check_kube_config
@@ -232,3 +256,4 @@ check_apiserver_status
 check_calico_pods
 check_tigera_pods
 check_tier
+display_summary
