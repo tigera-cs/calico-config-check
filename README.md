@@ -5,7 +5,13 @@ Tool for verifying Calico Enterprise installation and configuration
 
  1. Clone the repository
  2. Make sure your .kube/config is present in $HOME, else change the `kubeconfig` variable in script to point to desrired location.
- 3. ./calico-cluster-check.sh
+ 3. You can directly run the script ./calico-cluster-check.sh
+ 4. Otherwise, to run the script as a kubectl plugin (ex. kubectl calicocheck)
+ mv calico-cluster-check.sh kubectl-calicocheck
+ chmod +x kubectl-calicocheck
+ sudo mv kubectl-calicocheck /usr/local/bin/
+ 
+
 
 ### Checks performed
 
