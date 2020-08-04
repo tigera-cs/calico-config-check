@@ -53,6 +53,38 @@ function check_cluster_pod_cidr {
                 echo -e "\n"
 }
 
+function check_tigera_version {
+        echo -e "-------Checking Calico Enterprise Version-------"
+        calico_enterprise_version=`kubectl get clusterinformations.projectcalico.org default -o yaml | grep -i "cnxVersion" | awk '{print $2}'`
+        echo -e "Calico Enterprise version is $calico_enterprise_version"
+        echo -e "\n"
+}
+
+function check_tigera_license {
+        license_name=`kubectl get licensekeys.projectcalico.org -o yaml | grep name | awk '{print $2}'`
+        if [[ -n $license_name ]]
+        then
+                expiry=`kubectl get licensekeys.projectcalico.org default -o yaml | grep -i "expiry" | awk '{print $2}'`
+                expiry=${expiry%T*}
+                expiry=${expiry#\"}
+                date=$(date '+%Y-%m-%d')
+                if [[ $date <  $expiry ]]
+                then
+                        echo -e "$GREEN Calico Enterprise license is valid till $expiry $NC"
+                        success_array+=("$GREEN Calico Enterprise license is valid till $expiry $NC")
+                else
+                        echo -e "$RED Calico Enterprise license has expired $NC on $expiry"
+                        failure_array+=("$RED Calico Enterprise license has expired $NC on $expiry $NC")
+                fi
+        elif [[ $license_name == "" ]]
+        then
+                echo -e "$RED Calico enterprise license is not applied $NC"
+                failure_array+=("$RED Calico enterprise license is not applied $NC")
+        fi
+}
+
+
+
 function check_tigerastatus {
                 echo -e "-------Checking Tigera Components-------"
                 tigera_components=(apiserver calico compliance intrusion-detection log-collector log-storage manager)
@@ -249,6 +281,8 @@ function display_summary {
 check_kube_config
 check_kubeVersion
 check_cluster_pod_cidr
+check_tigera_version
+check_tigera_license
 check_tigerastatus
 check_es_pv_status
 check_tigera_namespaces
