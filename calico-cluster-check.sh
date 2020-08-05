@@ -8,6 +8,11 @@ kubeconfig=$HOME/.kube/config
 failure_array=()
 success_array=()
 
+function check_os_distribution {
+        echo -e "-------Checking and listing the os distribution-------"
+	echo `cat /etc/os-release | grep -i ^ID= | awk -F'=' '{print $2}'`
+	echo -e "\n"
+}
 
 function check_kube_config {
         echo -e "-------Checking and exporting kubconfig-------"
@@ -27,6 +32,8 @@ function check_kube_config {
 
 
 }
+
+
 function check_kubeVersion {
                 echo -e "-------Checking Kubernetes Client and Server version-------"
                 client_version=`kubectl version --short | awk 'NR==1{print $3}'`
@@ -267,6 +274,17 @@ function check_tier {
         echo -e "\n"
 }
 
+function calico_diagnostics {
+	echo -e "--------Calico Diagnostics----------"
+	sudo curl -o /usr/local/bin/kubectl-calico https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
+	sudo chmod +x /usr/local/bin/kubectl-calico
+	currwd=`pwd`
+	log_time=`date +'%m-%d-%y--%H:%M'`
+#	echo $currwd
+	kubectl calico diags
+	mv /tmp/tmp.* $currwd/diag_logs_$log_time
+}
+
 function display_summary {
         echo -e "--------Summary of execution--------"
         echo -e "Success results"
@@ -274,10 +292,9 @@ function display_summary {
         echo -e "\n"
         echo -e "Failed results"
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
-
-
 }
 
+check_os_distribution
 check_kube_config
 check_kubeVersion
 check_cluster_pod_cidr
@@ -290,4 +307,5 @@ check_apiserver_status
 check_calico_pods
 check_tigera_pods
 check_tier
+calico_diagnostics
 display_summary
