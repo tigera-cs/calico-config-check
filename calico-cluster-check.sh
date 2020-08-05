@@ -8,11 +8,6 @@ kubeconfig=$HOME/.kube/config
 failure_array=()
 success_array=()
 
-function check_os_distribution {
-        echo -e "-------Checking and listing the os distribution-------"
-	echo `cat /etc/os-release | grep -i ^ID= | awk -F'=' '{print $2}'`
-	echo -e "\n"
-}
 
 function check_kube_config {
         echo -e "-------Checking and exporting kubconfig-------"
@@ -294,7 +289,6 @@ function display_summary {
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
 }
 
-check_os_distribution
 check_kube_config
 check_kubeVersion
 check_cluster_pod_cidr
