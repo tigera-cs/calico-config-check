@@ -18,7 +18,6 @@ Tool for verifying Calico Enterprise installation and configuration
 ### Checks performed
 
 ```
-check_os_distribution
 check_kube_config
 check_kubeVersion
 check_cluster_pod_cidr
