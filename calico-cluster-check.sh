@@ -11,7 +11,11 @@ success_array=()
 
 function check_kube_config {
         echo -e "-------Checking and exporting kubconfig-------"
-        if [ -f $kubeconfig ]
+        if [[ -v KUBECONFIG ]]
+        then
+                 echo -e "Using KUBECONFIG=$KUBECONFIG"
+                 echo -e "\n"
+        elif [ -f $kubeconfig ]
         then
                  echo -e "kubeconfig exists at $kubeconfig."
                  export KUBECONFIG=$kubeconfig
