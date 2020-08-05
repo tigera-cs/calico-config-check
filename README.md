@@ -18,9 +18,12 @@ Tool for verifying Calico Enterprise installation and configuration
 ### Checks performed
 
 ```
+check_os_distribution
 check_kube_config
 check_kubeVersion
 check_cluster_pod_cidr
+check_tigera_version
+check_tigera_license
 check_tigerastatus
 check_es_pv_status
 check_tigera_namespaces
@@ -28,4 +31,6 @@ check_apiserver_status
 check_calico_pods
 check_tigera_pods
 check_tier
+calico_diagnostics
+display_summary
 ```
