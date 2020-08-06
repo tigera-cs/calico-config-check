@@ -14,6 +14,12 @@ Tool for verifying Calico Enterprise installation and configuration
  sudo mv kubectl-calicocheck /usr/local/bin/
  ```
 
+## How to run
+
+
+```
+kubectl-calicocheck | tee execution-summary
+```
 
 ### Checks performed
 

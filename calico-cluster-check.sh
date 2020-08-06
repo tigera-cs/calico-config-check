@@ -67,6 +67,7 @@ function check_tigera_version {
 }
 
 function check_tigera_license {
+        echo -e "-------Checking Calico Enterprise License-------"
         license_name=`kubectl get licensekeys.projectcalico.org -o yaml | grep name | awk '{print $2}'`
         if [[ -n $license_name ]]
         then
@@ -87,6 +88,8 @@ function check_tigera_license {
                 echo -e "$RED Calico enterprise license is not applied $NC"
                 failure_array+=("$RED Calico enterprise license is not applied $NC")
         fi
+        echo -e "\n"
+
 }
 
 
@@ -127,33 +130,33 @@ function check_es_pv_status {
 
 function check_tigera_namespaces {
                 echo -e "-------- Checking if all Tigera specific namespaces are present -------"
-                tigera_namespaces=`kubectl get ns | grep tigera | wc -l`
-                if [ "$tigera_namespaces" == "10" ]
+                existing_namespaces=($(kubectl get ns | grep tigera | awk '{print $1}'))
+                tigera_namespaces=("tigera-compliance" "tigera-eck-operator" "tigera-elasticsearch" "tigera-fluentd" "tigera-intrusion-detection" "tigera-kibana" "tigera-manager" "tigera-operator" "tigera-prometheus" "tigera-system")
+                namespace_difference=()
+                for i in "${tigera_namespaces[@]}"; do
+                    skip=
+                    for j in "${existing_namespaces[@]}"; do
+                        [[ $i == $j ]] && { skip=1; break; }
+                    done
+                    [[ -n $skip ]] || namespace_difference+=("$i")
+                done
+#               declare -p namespace_difference
+                echo  ${namespace_difference[*]}
+                if [ -z "$namespace_difference" ]
                 then
                         echo -e "All tigera namespaces are present"
                         success_array+=("$GREEN All tigera namespaces are present $NC")
                 else
-                        echo -e "$RED All Tigera namespaces are not present $NC"
-                        ailure_array+=("$RED All Tigera namespaces are not present $NC")
+                        echo -e "Following Tigera namespaces are: " ${namespace_difference[*]}
+                        failure_array+=("$RED Following Tigera namespaces are not present: ${namespace_difference[*]} $NC")
                 fi
-                echo -e "\n"
 
 }
 
 function check_apiserver_status {
-                echo -e "-------Checking kube-apiserver and tigera-apiserver status-------"
+                echo -e "-------Checking tigera-apiserver status-------"
                 tigera_apiserver=`kubectl get po -l k8s-app=tigera-apiserver -n tigera-system | awk 'NR==2{print $3}'`
-                kube_apiserver=`kubectl get po -l component=kube-apiserver -n kube-system | awk 'NR==2{print $3}'`
-                if [ "$kube_apiserver" == "Running" ]
-                then 
-                        echo -e "kube-apiserver pod is $kube_apiserver"
-                        success_array+=("$GREEN kube-apiserver pod is $kube_apiserver $NC")
-                elif [ "$kube_apiserver" ! "Running" ]
-                then
-                        echo -e "$RED kube-apiserver pod is $kube_apiserver $NC"
-                        failure_array+=("$RED kube-apiserver pod is $kube_apiserver $NC")
-                fi
-                        if [ "$tigera_apiserver" == "Running" ]
+                if [ "$tigera_apiserver" == "Running" ]
                 then
                         echo -e "tigera-apiserver pod is $tigera_apiserver"
                         success_array+=("$GREEN tigera-apiserver pod is $tigera_apiserver $NC")
@@ -197,6 +200,10 @@ function check_calico_pods {
                 fi
                 echo "Complete calico-node logs are dumped at /tmp/calico_node_logs"
                 kubectl logs -l k8s-app=calico-node -n calico-system >> /tmp/calico_node_logs
+                if [ -f calico_node_error_logs ]
+                then
+                        rm calico_node_error_logs
+                fi
                 echo -e "\n"
 
 }
@@ -220,6 +227,14 @@ function check_tigera_pods {
                 else
                         kubectl logs -n $i -l k8s-app=$i -c $i >> /tmp/${i}_logs
                         echo -e "No errors found in ${i}, logs present at /tmp/${i}_logs"
+                fi
+                if [ -f tigera-manager_error_logs ]
+                then
+                        rm tigera-manager_error_logs
+                fi
+                if [ -f tigera-operator_error_logs ]
+                then
+                        rm tigera-operator_error_logs
                 fi
                 echo -e "\n"
         done
@@ -255,6 +270,14 @@ function check_tigera_pods {
                  kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node >> /tmp/fluentd_node_logs
                  echo -e "No errors found in fluentd-node, logs present at /tmp/fluentd_node_logs"
         fi
+        if [ -f tigera_secure_error_logs ]
+        then
+                rm tigera_secure_error_logs
+        fi
+        if [ -f fluentd_node_error_logs ]
+        then
+                rm fluentd_node_error_logs
+        fi
         echo -e "\n"
 }
 
@@ -274,14 +297,13 @@ function check_tier {
 }
 
 function calico_diagnostics {
-	echo -e "--------Calico Diagnostics----------"
-	sudo curl -o /usr/local/bin/kubectl-calico https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
-	sudo chmod +x /usr/local/bin/kubectl-calico
-	currwd=`pwd`
-	log_time=`date +'%m-%d-%y--%H:%M'`
-#	echo $currwd
-	kubectl calico diags
-	mv /tmp/tmp.* $currwd/diag_logs_$log_time
+        echo -e "--------Calico Diagnostics----------"
+        curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
+        currwd=`pwd`
+        log_time=`date +'%m-%d-%y--%H:%M'`
+        chmod +x kubectl-calico
+        ./kubectl-calico diags
+        mv /tmp/tmp.* $currwd/diag_logs_$log_time
 }
 
 function display_summary {
