@@ -7,6 +7,12 @@ NC='\033[0m'
 kubeconfig=$HOME/.kube/config
 failure_array=()
 success_array=()
+currwd=`pwd`
+tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
+setup_type=`if [ $tm_ns == 'tigera-manager' ]; then echo "Calico Enterprise"; else echo "Calico"; fi`
+
+
+if [ ! -d $currwd/diagnostics ]; then mkdir $currwd/diagnostics; fi
 
 
 function check_kube_config {
@@ -46,16 +52,11 @@ function check_kubeVersion {
 function check_cluster_pod_cidr {
                 echo -e "-------Checking Cluster and Pod CIDRs-------"
                 cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
-                pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
-                if [ "$cluster_cidr" == "$pod_cidr" ]
-                then
-                        echo -e "The Cluster CIDR and Pod CIDR match, current Cluster CIDR is $cluster_cidr and Pod CIDR is $pod_cidr"
-                        success_array+=("$GREEN Cluster CIDR check passed $NC")
-                else
+		if [ -z "$cluster_cidr" ]; then echo "Unable to retrieve the cluster cidr information"; else echo "The cluster cidr is $cluster_cidr"; fi
 
-                        echo -e "$RED Please make sure the Cluter and Pod CIDR match $NC, current Cluster CIDR is $cluster_cidr and Pod CIDR is $pod_cidr"
-                        failure_array+=("$RED Cluster CIDR check failed $NC")
-                fi
+                pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
+		if [ $pod_cidr == '' ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
+
                 echo -e "\n"
 }
 
@@ -150,7 +151,7 @@ function check_tigera_namespaces {
                         echo -e "Following Tigera namespaces are: " ${namespace_difference[*]}
                         failure_array+=("$RED Following Tigera namespaces are not present: ${namespace_difference[*]} $NC")
                 fi
-
+		echo -e "\n"
 }
 
 function check_apiserver_status {
@@ -191,8 +192,8 @@ function check_calico_pods {
                 if [ $? == 0 ]
                 then
                         cp calico_node_error_logs /tmp/
-                        echo -e "$RED Error logs found, logs present in file /tmp/calico_node_logs $NC"
-                        failure_array+=("$RED calico-node : Error logs found, logs present in file /tmp/calico_node_logs $NC")
+                        echo -e "$RED Error logs found, logs present in file /tmp/calico_node_error_logs $NC"
+                        failure_array+=("$RED calico-node : Error logs found, logs present in file /tmp/calico_node_error_logs $NC")
                         rm calico_node_error_logs
                 else
                         echo -e "No errors found in calico-node pods"
@@ -299,11 +300,15 @@ function check_tier {
 function calico_diagnostics {
         echo -e "--------Calico Diagnostics----------"
         curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
-        currwd=`pwd`
-        log_time=`date +'%m-%d-%y--%H:%M'`
+#        currwd=`pwd`
         chmod +x kubectl-calico
-        ./kubectl-calico diags
-        mv /tmp/tmp.* $currwd/diag_logs_$log_time
+        ./kubectl-calico diags >> /dev/null
+	latest_file=`ls -td -- /tmp/* | head -n 1`
+#	if [ ! -d $currwd/diagnostics ]; then mkdir $currwd/diagnostics; fi
+	if [ -d $currwd/diagnostics/calico-diagnostics ]; then rm -rf $currwd/diagnostics/calico-diagnostics; fi
+        cp -R $latest_file/* $currwd/diagnostics/.
+	echo "Diagnostic bundle produced at $currwd/diagnostics"
+        echo -e "\n"
 }
 
 function display_summary {
@@ -315,17 +320,27 @@ function display_summary {
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
 }
 
-check_kube_config
-check_kubeVersion
-check_cluster_pod_cidr
-check_tigera_version
-check_tigera_license
-check_tigerastatus
-check_es_pv_status
-check_tigera_namespaces
-check_apiserver_status
-check_calico_pods
-check_tigera_pods
-check_tier
-calico_diagnostics
-display_summary
+if [ setup_type=='Calico Enterpise' ]
+then
+	check_kube_config
+	check_kubeVersion
+	check_cluster_pod_cidr
+	check_tigera_version
+	check_tigera_license
+	check_tigerastatus
+	check_es_pv_status
+	check_tigera_namespaces
+	check_apiserver_status
+	check_calico_pods
+	check_tigera_pods
+	check_tier
+	calico_diagnostics
+	display_summary
+else
+	check_kube_config
+	check_kubeVersion
+	check_cluster_pod_cidr
+#	check_apiserver_status
+#	check_calico_pods
+	display_summary
+fi
