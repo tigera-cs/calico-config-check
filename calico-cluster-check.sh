@@ -23,7 +23,7 @@ function update_calico_config_check {
 	currwd=`pwd`
 	filepath="$currwd/$0"
 	localfilesize=`stat -c %s $filepath`
-	remotefilesize=`curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/tigera-cs/calico-config-check/contents/calico-cluster-check.sh | grep size | awk '{print $2}' | awk -F , '{print $1}'`
+	remotefilesize=`curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/nitishdsharma90/calico-config-check/contents/calico-cluster-check.sh | grep size | awk '{print $2}' | awk -F , '{print $1}'`
 	echo $localfilesize $remotefilesize
 	if [[ "$localfilesize" -eq "$remotefilesize" ]]; then
 		echo "Script up to date"
@@ -32,7 +32,7 @@ function update_calico_config_check {
 	    read -p "Do you want to update the calico-check script?(yes/no)" reply
 	    case $reply in
         	    [Yy]es) echo "Updating the script file ....."
-                	    curl -s -O https://raw.githubusercontent.com/tigera-cs/calico-config-check/master/calico-cluster-check.sh;;
+                	    curl -s -O https://raw.githubusercontent.com/nitishdsharma90/calico-config-check/master/calico-cluster-check.sh;;
 	            [Nn]o) echo "User doesn't want to update the script" ;;
         	        *) echo "Wrong answer. Print yes or no"
                 	   unset reply ;;
