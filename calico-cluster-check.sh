@@ -9,10 +9,36 @@ failure_array=()
 success_array=()
 currwd=`pwd`
 tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
-setup_type=`if [ $tm_ns == 'tigera-manager' ]; then echo "Calico Enterprise"; else echo "Calico"; fi`
-
+setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"; else echo "Calico"; fi`
 
 if [ ! -d $currwd/diagnostics ]; then mkdir $currwd/diagnostics; fi
+
+function check_operator_based {
+	kubectl get pods -A | grep operator | awk '{print $1}' >/dev/null 2>&1
+	if [ $? -ne 0 ]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
+}
+
+
+function update_calico_config_check {
+	currwd=`pwd`
+	filepath="$currwd/$0"
+	localfilesize=`stat -c %s $filepath`
+	remotefilesize=`curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/tigera-cs/calico-config-check/contents/calico-cluster-check.sh | grep size | awk '{print $2}' | awk -F , '{print $1}'`
+	echo $localfilesize $remotefilesize
+	if [[ "$localfilesize" -eq "$remotefilesize" ]]; then
+		echo "Script up to date"
+	else
+	    echo "Need to pull the updated script"
+	    read -p "Do you want to update the calico-check script?(yes/no)" reply
+	    case $reply in
+        	    [Yy]es) echo "Updating the script file ....."
+                	    curl -s -O https://raw.githubusercontent.com/tigera-cs/calico-config-check/master/calico-cluster-check.sh;;
+	            [Nn]o) echo "User doesn't want to update the script" ;;
+        	        *) echo "Wrong answer. Print yes or no"
+                	   unset reply ;;
+	    esac
+	fi
+}
 
 
 function check_kube_config {
@@ -34,7 +60,6 @@ function check_kube_config {
                 echo -e "\n"
                 exit 0
         fi
-
 
 }
 
@@ -161,7 +186,7 @@ function check_apiserver_status {
                 then
                         echo -e "tigera-apiserver pod is $tigera_apiserver"
                         success_array+=("$GREEN tigera-apiserver pod is $tigera_apiserver $NC")
-                elif [ "$tigera_apiserver" ! "Running" ]
+                elif [ "$tigera_apiserver" != "Running" ]
                 then
                         echo -e "$RED tigera-apiserver pod is $tigera_apiserver $NC"
                         failure_array+=("$RED tigera-apiserver pod is $tigera_apiserver $NC")
@@ -169,8 +194,23 @@ function check_apiserver_status {
                 echo -e "\n"
 }
 
+function check_kubeapiserver_status {
+                echo -e "-------Checking kube-apiserver status-------"
+                kube_apiserver=`kubectl get po -l component=kube-apiserver -n kube-system | awk 'NR==2{print $3}'`
+                if [ "$kube_apiserver" == "Running" ]
+                then
+                        echo -e "kube-apiserver pod is $kube_apiserver"
+                        success_array+=("$GREEN kube-apiserver pod is $kube_apiserver $NC")
+                elif [ "$kube_apiserver" != "Running" ]
+                then
+                        echo -e "$RED kube-apiserver pod is $kube_apiserver $NC"
+                        failure_array+=("$RED kube-apiserver pod is $kube_apiserver $NC")
+                fi
+                echo -e "\n"
+}
+
 function check_calico_pods {
-                echo -e "-------Checking calico-node deamonset status-------"
+                echo -e "-------Checking calico-node damonset status-------"
                 desired_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $2}'`
                 current_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $3}'`
                 ready_pod_count=`kubectl get ds calico-node -n calico-system | awk 'NR==2{print $4}'`
@@ -320,8 +360,11 @@ function display_summary {
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
 }
 
-if [ setup_type=='Calico Enterpise' ]
+if [[ "$setup_type" == "Calico Enterprise" ]]
 then
+	echo Cluster type is $setup_type
+	update_calico_config_check
+	check_operator_based
 	check_kube_config
 	check_kubeVersion
 	check_cluster_pod_cidr
@@ -337,10 +380,13 @@ then
 	calico_diagnostics
 	display_summary
 else
+	echo Cluster type is $setup_type
+	update_calico_config_check
+	check_operator_based
 	check_kube_config
-	check_kubeVersion
+        check_kubeVersion
 	check_cluster_pod_cidr
-#	check_apiserver_status
-#	check_calico_pods
+	check_kubeapiserver_status
+	check_calico_pods
 	display_summary
 fi
