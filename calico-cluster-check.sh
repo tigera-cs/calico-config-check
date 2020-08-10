@@ -14,8 +14,8 @@ setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"
 if [ ! -d $currwd/diagnostics ]; then mkdir $currwd/diagnostics; fi
 
 function check_operator_based {
-	kubectl get pods -A | grep operator | awk '{print $1}' >/dev/null 2>&1
-	if [ $? -ne 0 ]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
+	state=`kubectl get pods -A | grep operator | awk '{print $1}'`
+	if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
 }
 
 
