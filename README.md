@@ -39,12 +39,3 @@ check_tier
 calico_diagnostics
 display_summary
 ```
-
-### Script available to update the local calico-confg-check script
-
-## How to run
-
-```
-chmod +x update_calicocheck.sh
-./update_calicocheck.sh
-```
