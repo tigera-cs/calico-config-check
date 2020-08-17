@@ -74,6 +74,35 @@ function check_kubeVersion {
 
 }
 
+function cidr_check_status {
+sudo apt-get install python-pip -y >/dev/null 2>&1
+sudo pip install ipaddr >/dev/null 2>&1
+
+cat << EOF > cidrcheck.py
+#!/usr/bin/python
+
+import ipaddr
+import sys
+
+ccidr = sys.argv[1]
+pcidr = sys.argv[2]
+
+#print(ccidr)
+
+n1 = ipaddr.IPNetwork("{}".format(ccidr))
+n2 = ipaddr.IPNetwork("{}".format(pcidr))
+
+#print(n1, n2)
+
+print(n1.overlaps(n2))
+
+EOF
+
+chmod +x cidrcheck.py
+
+./cidrcheck.py $1 $2	
+}
+
 function check_cluster_pod_cidr {
                 echo -e "-------Checking Cluster and Pod CIDRs-------"
                 cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
@@ -81,9 +110,16 @@ function check_cluster_pod_cidr {
 
                 pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
 		if [ $pod_cidr == '' ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
+		
+		cidr_check=$(cidr_check_status $cluster_cidr $pod_cidr)
+
+		if [ "$cidr_check" == "True" ] && [ ! -z "$cluster_cidr" ]; then echo "Pod cidr is a subset of Cluster cidr"; else echo ""; fi
+
+		rm cidrcheck.py
 
                 echo -e "\n"
 }
+
 
 function check_tigera_version {
         echo -e "-------Checking Calico Enterprise Version-------"
