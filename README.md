@@ -1,6 +1,9 @@
 # calico-config-check
 Tool for verifying Calico Enterprise installation and configuration
 
+## Prerequistes
+Python should be present on Bastion host.
+
 ## How to use
 
 
@@ -24,6 +27,7 @@ kubectl-calicocheck | tee execution-summary
 ### Checks performed
 
 ```
+update_calico_config_check
 check_kube_config
 check_kubeVersion
 check_cluster_pod_cidr
