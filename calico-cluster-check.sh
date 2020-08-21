@@ -68,8 +68,19 @@ function check_kubeVersion {
                 echo -e "-------Checking Kubernetes Client and Server version-------"
                 client_version=`kubectl version --short | awk 'NR==1{print $3}'`
                 server_version=`kubectl version --short | awk 'NR==2{print $3}'`
+                distribution_type=$(kubectl get Installation.operator.tigera.io -o jsonpath='{.items[0].spec.kubernetesProvider}' 2>/dev/null || echo -n 'unknown')
                 echo -e "The client version is $client_version"
-                echo -e "The server version is $server_version\n"
+                echo -e "The server version is $server_version"
+                echo -e "Tigera operator CR indicates this is a $distribution_type cluster"
+                case $distribution_type in
+                        OpenShift)
+                        ocp_version=$(kubectl get ClusterVersion.config.openshift.io -o jsonpath='{.items[0].status.desired.version}' 2>/dev/null || echo -n 'unknown')
+                        ocp_platform=$(kubectl get infrastructure.config.openshift.io -o jsonpath='{.items[0].status.platform}' 2>/dev/null || echo -n 'unknown')
+                        echo -e "  OpenShift is running on $ocp_platform and the version seems to be $ocp_version"
+                        ;;
+                        *)
+                        ;;
+                esac
                 echo -e "\n"
 
 }
