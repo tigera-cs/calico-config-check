@@ -120,7 +120,7 @@ function check_cluster_pod_cidr {
 		if [ -z "$cluster_cidr" ]; then echo "Unable to retrieve the cluster cidr information"; else echo "The cluster cidr is $cluster_cidr"; fi
 
                 pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
-		if [ $pod_cidr == '' ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
+		if [ -z "$pod_cidr" ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
 		
 		if [  ! -z $pod_cidr ]  &&  [ ! -z $cluster_cidr ]; then cidr_check=$(cidr_check_status $cluster_cidr $pod_cidr); fi
 
