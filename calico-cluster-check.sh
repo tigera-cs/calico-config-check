@@ -11,33 +11,41 @@ currwd=`pwd`
 tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
 setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"; else echo "Calico"; fi`
 
-if [ ! -d $currwd/diagnostics ]; then mkdir $currwd/diagnostics; fi
+if [ ! -d $currwd/calico-logs ]; then mkdir $currwd/calico-logs; fi
 
 function check_operator_based {
-	state=`kubectl get pods -A | grep operator | awk '{print $1}'`
-	if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
+        state=`kubectl get pods -A | grep operator | awk '{print $1}'`
+        if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
+}
+
+function check_kubectl_calico_binary {
+        echo "------------------------kubectl-calico binary check------------------------"
+        if [ $(ls kubectl-calico | wc -l) -eq 1 ]; then echo "kubectl-calico binary exists at $currwd,  execution will continue"; else echo "Please make sure kubectl-calico binary exists at $
+currwd"; fi
+        echo -e "\n"
 }
 
 
 function update_calico_config_check {
-	currwd=`pwd`
-	filepath="$currwd/$0"
-	localfilesize=`stat -c %s $filepath`
-	remotefilesize=`curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/tigera-cs/calico-config-check/contents/calico-cluster-check.sh | grep size | awk '{print $2}' | awk -F , '{print $1}'`
-	echo $localfilesize $remotefilesize
-	if [[ "$localfilesize" -eq "$remotefilesize" ]]; then
-		echo "Script up to date"
-	else
-	    echo "Need to pull the updated script"
-	    read -p "Do you want to update the calico-check script?(yes/no)" reply
-	    case $reply in
-        	    [Yy]es) echo "Updating the script file ....."
-                	    curl -s -O https://raw.githubusercontent.com/tigera-cs/calico-config-check/master/calico-cluster-check.sh;;
-	            [Nn]o) echo "User doesn't want to update the script" ;;
-        	        *) echo "Wrong answer. Print yes or no"
-                	   unset reply ;;
-	    esac
-	fi
+        currwd=`pwd`
+        filepath="$currwd/$0"
+        localfilesize=`stat -c %s $filepath`
+        remotefilesize=`curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/tigera-cs/calico-config-check/contents/calico-cluster-check.sh | grep size | awk '{pri
+nt $2}' | awk -F , '{print $1}'`
+        echo $localfilesize $remotefilesize
+        if [[ "$localfilesize" -eq "$remotefilesize" ]]; then
+                echo "Script up to date"
+        else
+            echo "Need to pull the updated script"
+            read -p "Do you want to update the calico-check script?(yes/no)" reply
+            case $reply in
+                    [Yy]es) echo "Updating the script file ....."
+                            curl -s -O https://raw.githubusercontent.com/tigera-cs/calico-config-check/master/calico-cluster-check.sh;;
+                    [Nn]o) echo "User has opted not to update the script" ;;
+                        *) echo "Wrong answer. Print yes or no"
+                           unset reply ;;
+            esac
+        fi
 }
 
 
@@ -68,8 +76,23 @@ function check_kubeVersion {
                 echo -e "-------Checking Kubernetes Client and Server version-------"
                 client_version=`kubectl version --short | awk 'NR==1{print $3}'`
                 server_version=`kubectl version --short | awk 'NR==2{print $3}'`
+                x=`expr "${server_version:3:2}" - "${client_version:3:2}"`
+                x=`echo $x | tr -d -`
+#               echo $x
+                if [ $x -gt 1 ]; then echo "Warn: Difference between the Kubernetes client and server Minor Versions shouldn't be more than 1"; else echo "Kubernetes client and server Minor Versions are in range"; fi
+                distribution_type=$(kubectl get Installation.operator.tigera.io -o jsonpath='{.items[0].spec.kubernetesProvider}' 2>/dev/null || echo -n 'unknown')
                 echo -e "The client version is $client_version"
-                echo -e "The server version is $server_version\n"
+                echo -e "The server version is $server_version"
+                if [ ! -z $distribution_type ]; then echo -e "Tigera operator CR indicates this is a $distribution_type cluster"; fi
+                case $distribution_type in
+                        OpenShift)
+                        ocp_version=$(kubectl get ClusterVersion.config.openshift.io -o jsonpath='{.items[0].status.desired.version}' 2>/dev/null || echo -n 'unknown')
+                        ocp_platform=$(kubectl get infrastructure.config.openshift.io -o jsonpath='{.items[0].status.platform}' 2>/dev/null || echo -n 'unknown')
+                        echo -e "  OpenShift is running on $ocp_platform and the version seems to be $ocp_version"
+                        ;;
+                        *)
+                        ;;
+                esac
                 echo -e "\n"
 
 }
@@ -100,22 +123,24 @@ EOF
 
 chmod +x cidrcheck.py
 
-./cidrcheck.py $1 $2	
+./cidrcheck.py $1 $2
 }
 
 function check_cluster_pod_cidr {
                 echo -e "-------Checking Cluster and Pod CIDRs-------"
                 cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
-		if [ -z "$cluster_cidr" ]; then echo "Unable to retrieve the cluster cidr information"; else echo "The cluster cidr is $cluster_cidr"; fi
+                if [ -z "$cluster_cidr" ]; then echo "Unable to retrieve the cluster cidr information"; else echo "The cluster cidr is $cluster_cidr"; fi
 
                 pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
-		if [ $pod_cidr == '' ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
-		
-		cidr_check=$(cidr_check_status $cluster_cidr $pod_cidr)
+                if [ -z "$pod_cidr" ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
 
-		if [ "$cidr_check" == "True" ] && [ ! -z "$cluster_cidr" ]; then echo "Pod cidr is a subset of Cluster cidr"; else echo ""; fi
+                if [  ! -z $pod_cidr ]  &&  [ ! -z $cluster_cidr ]; then cidr_check=$(cidr_check_status $cluster_cidr $pod_cidr); fi
 
-		rm cidrcheck.py
+                if [ "$cidr_check" == "True" ] && [ ! -z "$cluster_cidr" ]; then echo "Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr"; success_array+=("$GREEN Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr  $NC"); else echo "Pod cidr is not a subset of Cluster cidr"; failure_array+=("$RED Pod cidr is not a subset of Cluster cidr $NC"); fi
+
+                if [ -f cidrcheck.py ]; then
+                        rm cidrcheck.py
+                fi
 
                 echo -e "\n"
 }
@@ -123,15 +148,20 @@ function check_cluster_pod_cidr {
 
 function check_tigera_version {
         echo -e "-------Checking Calico Enterprise Version-------"
+        echo -e "-------Calico Enterprise Version-------" >> /tmp/execution_output
         calico_enterprise_version=`kubectl get clusterinformations.projectcalico.org default -o yaml | grep -i "cnxVersion" | awk '{print $2}'`
         echo -e "Calico Enterprise version is $calico_enterprise_version"
+        echo "$calico_enterprise_version" >> /tmp/execution_output
+        echo -e "\n" >> /tmp/execution_output
         echo -e "\n"
 }
 
 function check_tigera_license {
         echo -e "-------Checking Calico Enterprise License-------"
-        license_name=`kubectl get licensekeys.projectcalico.org -o yaml | grep name | awk '{print $2}'`
-        if [[ -n $license_name ]]
+        license_name=`kubectl get licensekeys.projectcalico.org -o yaml | grep "name:" | awk '{print $2}'`
+        calico_enterprise_version=`kubectl get clusterinformations.projectcalico.org default -o yaml | grep -i "cnxVersion" | awk '{print $2}'`
+        echo -e "Note: License expiry check is available for Clusters with Calico Enterprise v3.0 onwards"
+        if [ -n $license_name ] && [ "$calico_enterprise_version" == "v3.2.0" ] || [ "$calico_enterprise_version" == "v3.1.0" ] || [ "$calico_enterprise_version" == "v3.0.0" ]
         then
                 expiry=`kubectl get licensekeys.projectcalico.org default -o yaml | grep -i "expiry" | awk '{print $2}'`
                 expiry=${expiry%T*}
@@ -176,22 +206,35 @@ function check_tigerastatus {
 
 }
 
-function check_es_pv_status {
-                echo -e "-------Checking Elasticsearch PV bound status-------"
-                bound_status=`kubectl get pv | grep 'tigera-elasticsearch' | awk '{print $5}'`
+function check_es_pvc_status {
+                echo -e "-------Checking Elasticsearch PVC bound status-------"
+                echo -e "---------------------PVC Status----------------------" >> /tmp/execution_output
+                kubectl get pvc -A | grep 'tigera-elasticsearch' >> /tmp/execution_output
+                echo -e "\n" >> /tmp/execution_output
+                echo -e "---------------------PV Status---------------------" >> /tmp/execution_output
+                kubectl get pv | grep 'tigera-elasticsearch' >> /tmp/execution_output
+                echo -e "\n" >> /tmp/execution_output
+                echo -e "---------------------Storage Class Status---------------------" >> /tmp/execution_output
+                kubectl get sc  | grep 'tigera-elasticsearch' >> /tmp/execution_output
+                echo -e "\n" >> /tmp/execution_output
+                bound_status=`kubectl get pvc -A | grep 'tigera-elasticsearch' | awk '{print $3}'`
+#               log_storage=`kubectl get tigerastatus | grep log-storage | awk '{print $2}'`
                 if [ "$bound_status" == "Bound" ]
                 then
-                        echo -e "Elasticsearch PV is bounded"
-                        success_array+=("$GREEN Elasticsearch PV is bounded $NC")
+                        echo -e "Elasticsearch PVC is bounded"
+                        success_array+=("$GREEN Elasticsearch PVC is bounded $NC")
                 else
-                        echo -e "$RED Elasticsearch PV is not bouded $NC"
-                        failure_array+=("$RED Elasticsearch PV is not bouded $NC")
+                        echo -e "$RED Elasticsearch PVC is not bouded $NC"
+                        failure_array+=("$RED Elasticsearch PVC is not bouded $NC")
                 fi
                 echo -e "\n"
 }
 
 function check_tigera_namespaces {
                 echo -e "-------- Checking if all Tigera specific namespaces are present -------"
+                echo -e "-------- Tigera specific namespaces -------" >> /tmp/execution_output
+                kubectl get ns | grep tigera  >> /tmp/execution_output
+                echo -e "\n" >> /tmp/execution_output
                 existing_namespaces=($(kubectl get ns | grep tigera | awk '{print $1}'))
                 tigera_namespaces=("tigera-compliance" "tigera-eck-operator" "tigera-elasticsearch" "tigera-fluentd" "tigera-intrusion-detection" "tigera-kibana" "tigera-manager" "tigera-operator" "tigera-prometheus" "tigera-system")
                 namespace_difference=()
@@ -212,7 +255,7 @@ function check_tigera_namespaces {
                         echo -e "Following Tigera namespaces are: " ${namespace_difference[*]}
                         failure_array+=("$RED Following Tigera namespaces are not present: ${namespace_difference[*]} $NC")
                 fi
-		echo -e "\n"
+                echo -e "\n"
 }
 
 function check_apiserver_status {
@@ -290,7 +333,11 @@ function check_tigera_pods {
         for i in "${tigera_apps[@]}"
         do
                 echo -e "-------$i pod status-------"
+
                 kubectl get po -n $i -l k8s-app=$i -o wide
+                echo -e "-------$i pod status-------" >> execution_output
+                kubectl get po -n $i -l k8s-app=$i -o wide  >> execution_output
+                echo -e "\n" >> /tmp/execution_output
                 echo -e "\n"
                 echo -e "-------Checking $i pod logs-------"
                 kubectl logs -n $i -l k8s-app=$i -c $i | $grep_filter  >> ${i}_error_logs
@@ -317,6 +364,9 @@ function check_tigera_pods {
         done
         echo -e "-------tigera-kibana pod status-------"
         kubectl get po -n tigera-kibana -l k8s-app=tigera-secure -o wide
+        echo -e "-------tigera-kibana pod status-------" >> /tmp/execution_output
+        kubectl get po -n tigera-kibana -l k8s-app=tigera-secure -o wide  >> /tmp/execution_output
+        echo -e "\n" >> /tmp/execution_output
         echo -e "\n"
         echo -e "-------Checking tigera-kibana pod logs-------"
         kubectl logs -n tigera-kibana -l k8s-app=tigera-secure | $grep_filter  >> tigera_secure_error_logs
@@ -334,6 +384,9 @@ function check_tigera_pods {
         echo -e "\n"
         echo -e "-------tigera-fluentd pod status-------"
         kubectl get po -n tigera-fluentd -l k8s-app=fluentd-node -o wide
+        echo -e "-------tigera-fluentd pod status-------" >> /tmp/execution_output
+        kubectl get po -n tigera-fluentd -l k8s-app=fluentd-node -o wide  >> /tmp/execution_output
+        echo -e "\n" >> /tmp/execution_output
         echo -e "\n"
         echo -e "-------Checking tigera-fluentd pod logs-------"
         kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node | $grep_filter  >> fluentd_node_error_logs
@@ -375,54 +428,92 @@ function check_tier {
 
 function calico_diagnostics {
         echo -e "--------Calico Diagnostics----------"
-        curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
-#        currwd=`pwd`
-        chmod +x kubectl-calico
-        ./kubectl-calico diags >> /dev/null
-	latest_file=`ls -td -- /tmp/* | head -n 1`
-#	if [ ! -d $currwd/diagnostics ]; then mkdir $currwd/diagnostics; fi
-	if [ -d $currwd/diagnostics/calico-diagnostics ]; then rm -rf $currwd/diagnostics/calico-diagnostics; fi
-        cp -R $latest_file/* $currwd/diagnostics/.
-	echo "Diagnostic bundle produced at $currwd/diagnostics"
-        echo -e "\n"
+         if [ $(ls kubectl-calico | wc -l) -eq 1 ] 
+         then 
+                 curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
+                 chmod +x kubectl-calico
+                 ./kubectl-calico diags >> /dev/null
+                 latest_file=`ls -td -- /tmp/* | head -n 1`
+                 if [ -d $currwd/calico-logs/calico-diagnostics ]; then rm -rf $currwd/calico-logs/calico-diagnostics; fi
+                 cp -R $latest_file/calico-diagnostics $currwd/calico-logs/.
+                 echo "Diagnostic bundle produced at $currwd/calico-logs"
+                 echo -e "\n"
+         else 
+                 echo "Please make sure kubectl-calico binary exist at $currwd"
+                 failure_array+=("$RED Please make sure kubectl-calico binary exist at $currwd $NC")
+                 echo -e "\n"
+         fi
+#        curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
+}
+
+function copy_logs {
+        if [ -d $currwd/calico-logs/calico-diagnostics ]
+        then
+                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/calico_node_error_logs; fi
+                if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-manager_error_logs; fi
+                if [ -f /tmp/tigera-operator_error_logs ]; then cp /tmp/tigera-operator_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-operator_error_logs; fi
+                if [ -f /tmp/tigera_secure_error_logs ]; then cp /tmp/tigera_secure_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera_secure_error_logs; fi
+                if [ -f /tmp/fluentd_node_error_logs ]; then cp /tmp/fluentd_node_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/fluentd_node_error_logs; fi
+                if [ -f /tmp/tigera_secure_logs ]; then cp /tmp/tigera_secure_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera_secure_logs; fi
+                if [ -f /tmp/fluentd_node_logs ]; then cp /tmp/fluentd_node_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/fluentd_node_logs; fi
+                if [ -f /tmp/tigera-manager_logs ]; then cp /tmp/tigera-manager_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-manager_logs; fi
+                if [ -f /tmp/tigera-operator_logs ]; then cp /tmp/tigera-operator_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-operator_logs; fi
+                if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/; rm /tmp/execution_output; fi
+
+        fi
+
+
 }
 
 function display_summary {
         echo -e "--------Summary of execution--------"
-        echo -e "Success results"
         ( IFS=$'\n'; echo -e "${success_array[*]}")
         echo -e "\n"
-        echo -e "Failed results"
+        echo -e "Error Notes "
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
+        echo -e "\n"
+        echo -e "---------------Note----------------"
+        echo -e "Detailed logs are present in $currwd/calico-logs/calico-diagnostics directory"
+        echo -e "If required, attach and send $currwd/calico-logs/calico-diagnostics.tar.gz for Tigera team to investigate"
+        echo -e "\n"
+        if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/calico-diagnostics/; fi
+        if [ $(ls kubectl-calico | wc -l) -eq 1 ]
+        then
+                tar -czvf calico-diagnostics.tar.gz -P $currwd/calico-logs/calico-diagnostics >> /dev/null
+                mv calico-diagnostics.tar.gz $currwd/calico-logs
+        fi
 }
 
 if [[ "$setup_type" == "Calico Enterprise" ]]
 then
-	echo Cluster type is $setup_type
-	update_calico_config_check
-	check_operator_based
-	check_kube_config
-	check_kubeVersion
-	check_cluster_pod_cidr
-	check_tigera_version
-	check_tigera_license
-	check_tigerastatus
-	check_es_pv_status
-	check_tigera_namespaces
-	check_apiserver_status
-	check_calico_pods
-	check_tigera_pods
-	check_tier
-	calico_diagnostics
-	display_summary
-else
-	echo Cluster type is $setup_type
-	update_calico_config_check
-	check_operator_based
-	check_kube_config
+        echo Cluster type is $setup_type
+        update_calico_config_check
+        check_operator_based
+        check_kubectl_calico_binary
+        check_kube_config
         check_kubeVersion
-	check_cluster_pod_cidr
-	check_kubeapiserver_status
-	check_calico_pods
-	display_summary
+        check_cluster_pod_cidr
+        check_tigera_version
+        check_tigera_license
+        check_tigerastatus
+        check_es_pvc_status
+        check_tigera_namespaces
+        check_apiserver_status
+        check_calico_pods
+        check_tigera_pods
+        check_tier
+        calico_diagnostics
+        copy_logs
+        display_summary
+else
+        echo Cluster type is $setup_type
+        update_calico_config_check
+        check_operator_based
+        check_kube_config
+        check_kubeVersion
+        check_cluster_pod_cidr
+        check_kubeapiserver_status
+        check_calico_pods
+        copy_logs
+        display_summary
 fi
