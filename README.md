@@ -25,9 +25,8 @@ kubectl-calicocheck | tee execution-summary
 
 ### Checks performed
 
-```
 **Calico Enterprise checks**
-
+```
 update_calico_config_check
 check_operator_based
 check_kubectl_calico_binary
@@ -46,9 +45,10 @@ check_tier
 calico_diagnostics
 copy_logs
 display_summary
+```
 
 **OSS calico checks**
-
+```
 update_calico_config_check
 check_operator_based
 check_kube_config
