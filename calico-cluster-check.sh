@@ -3,6 +3,7 @@
 grep_filter="grep -i error"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
 NC='\033[0m'
 kubeconfig=$HOME/.kube/config
 failure_array=()
@@ -10,8 +11,8 @@ success_array=()
 currwd=`pwd`
 tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
 setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"; else echo "Calico"; fi`
-
-if [ ! -d $currwd/calico-logs ]; then mkdir $currwd/calico-logs; fi
+currdate=`date "+%Y.%m.%d-%H.%M.%S"`
+if [ ! -d $currwd/calico-logs ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
 
 function check_operator_based {
         state=`kubectl get pods -A | grep operator | awk '{print $1}'`
@@ -28,7 +29,7 @@ currwd"; fi
 
 function update_calico_config_check {
         currwd=`pwd`
-        filepath="$currwd/$0"
+        filepath="$0"
         localfilesize=`stat -c %s $filepath`
         remotefilesize=`curl -s -H "Accept: application/vnd.github.v3+json" https://api.github.com/repos/tigera-cs/calico-config-check/contents/calico-cluster-check.sh | grep size | awk '{pri
 nt $2}' | awk -F , '{print $1}'`
@@ -79,7 +80,7 @@ function check_kubeVersion {
                 x=`expr "${server_version:3:2}" - "${client_version:3:2}"`
                 x=`echo $x | tr -d -`
 #               echo $x
-                if [ $x -gt 1 ]; then echo "Warn: Difference between the Kubernetes client and server Minor Versions shouldn't be more than 1"; else echo "Kubernetes client and server Minor Versions are in range"; fi
+                if [ $x -gt 1 ]; then echo -e "$YELLOW Warn: Difference between the Kubernetes client and server Minor Versions shouldn't be more than 1 $NC"; else echo "Kubernetes client and server Minor Versions are in range"; fi
                 distribution_type=$(kubectl get Installation.operator.tigera.io -o jsonpath='{.items[0].spec.kubernetesProvider}' 2>/dev/null || echo -n 'unknown')
                 echo -e "The client version is $client_version"
                 echo -e "The server version is $server_version"
@@ -88,7 +89,7 @@ function check_kubeVersion {
                         OpenShift)
                         ocp_version=$(kubectl get ClusterVersion.config.openshift.io -o jsonpath='{.items[0].status.desired.version}' 2>/dev/null || echo -n 'unknown')
                         ocp_platform=$(kubectl get infrastructure.config.openshift.io -o jsonpath='{.items[0].status.platform}' 2>/dev/null || echo -n 'unknown')
-                        echo -e "  OpenShift is running on $ocp_platform and the version seems to be $ocp_version"
+                        echo -e "OpenShift is running on $ocp_platform and the version is to be $ocp_version"
                         ;;
                         *)
                         ;;
@@ -98,37 +99,52 @@ function check_kubeVersion {
 }
 
 function cidr_check_status {
-sudo apt-get install python-pip -y >/dev/null 2>&1
-sudo pip install ipaddr >/dev/null 2>&1
+subnet1="$1"
+subnet2="$2"
 
-cat << EOF > cidrcheck.py
-#!/usr/bin/python
+# calculate min and max of subnet1
+# calculate min and max of subnet2
+# find the common range (check_overlap)
+# print it if there is one
 
-import ipaddr
-import sys
+read_range () {
+    IFS=/ read ip mask <<<"$1"
+    IFS=. read -a octets <<< "$ip";
+    set -- "${octets[@]}";
+    min_ip=$(($1*256*256*256 + $2*256*256 + $3*256 + $4));
+    host=$((32-mask))
+    max_ip=$(($min_ip+(2**host)-1))
+    printf "%d-%d\n" "$min_ip" "$max_ip"
+}
 
-ccidr = sys.argv[1]
-pcidr = sys.argv[2]
+check_overlap () {
+    IFS=- read min1 max1 <<<"$1";
+    IFS=- read min2 max2 <<<"$2";
+    if [ "$max1" -lt "$min2" ] || [ "$max2" -lt "$min1" ]; then return; fi
+    [ "$max1" -ge "$max2" ] && max="$max2" ||   max="$max1"
+    [ "$min1" -le "$min2" ] && min="$min2" || min="$min1"
+    printf "%s-%s\n" "$(to_octets $min)" "$(to_octets $max)"
+}
 
-#print(ccidr)
+to_octets () {
+    first=$(($1>>24))
+    second=$((($1&(256*256*255))>>16))
+    third=$((($1&(256*255))>>8))
+    fourth=$(($1&255))
+    printf "%d.%d.%d.%d\n" "$first" "$second" "$third" "$fourth" 
+}
 
-n1 = ipaddr.IPNetwork("{}".format(ccidr))
-n2 = ipaddr.IPNetwork("{}".format(pcidr))
+range1="$(read_range $subnet1)"
+range2="$(read_range $subnet2)"
+overlap="$(check_overlap $range1 $range2)"
 
-#print(n1, n2)
+if [ -z $overlap ]; then echo "False"; else echo "True"; fi
 
-print(n1.overlaps(n2))
-
-EOF
-
-chmod +x cidrcheck.py
-
-./cidrcheck.py $1 $2
 }
 
 function check_cluster_pod_cidr {
                 echo -e "-------Checking Cluster and Pod CIDRs-------"
-                cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
+                cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}' | head -1`
                 if [ -z "$cluster_cidr" ]; then echo "Unable to retrieve the cluster cidr information"; else echo "The cluster cidr is $cluster_cidr"; fi
 
                 pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
@@ -136,7 +152,7 @@ function check_cluster_pod_cidr {
 
                 if [  ! -z $pod_cidr ]  &&  [ ! -z $cluster_cidr ]; then cidr_check=$(cidr_check_status $cluster_cidr $pod_cidr); fi
 
-                if [ "$cidr_check" == "True" ] && [ ! -z "$cluster_cidr" ]; then echo "Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr"; success_array+=("$GREEN Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr  $NC"); else echo "Pod cidr is not a subset of Cluster cidr"; failure_array+=("$RED Pod cidr is not a subset of Cluster cidr $NC"); fi
+                if [ "$cidr_check" == "True" ] && [ ! -z "$cluster_cidr" ]; then echo "Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr"; success_array+=("$GREEN Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr  $NC"); elif [ "$cidr_check" == "False" ] && [ ! -z "$cluster_cidr" ]; then echo "$RED Pod cidr is not a subset of Cluster cidr $NC"; failure_array+=("$RED Pod cidr is not a subset of Cluster cidr $NC"); fi
 
                 if [ -f cidrcheck.py ]; then
                         rm cidrcheck.py
@@ -231,8 +247,8 @@ function check_es_pvc_status {
 }
 
 function check_tigera_namespaces {
-                echo -e "-------- Checking if all Tigera specific namespaces are present -------"
-                echo -e "-------- Tigera specific namespaces -------" >> /tmp/execution_output
+                echo -e "--------Checking if all Tigera specific namespaces are present -------"
+                echo -e "--------Tigera specific namespaces -------" >> /tmp/execution_output
                 kubectl get ns | grep tigera  >> /tmp/execution_output
                 echo -e "\n" >> /tmp/execution_output
                 existing_namespaces=($(kubectl get ns | grep tigera | awk '{print $1}'))
@@ -335,8 +351,8 @@ function check_tigera_pods {
                 echo -e "-------$i pod status-------"
 
                 kubectl get po -n $i -l k8s-app=$i -o wide
-                echo -e "-------$i pod status-------" >> execution_output
-                kubectl get po -n $i -l k8s-app=$i -o wide  >> execution_output
+                echo -e "-------$i pod status-------" >> /tmp/execution_output
+                kubectl get po -n $i -l k8s-app=$i -o wide  >> /tmp/execution_output
                 echo -e "\n" >> /tmp/execution_output
                 echo -e "\n"
                 echo -e "-------Checking $i pod logs-------"
@@ -434,7 +450,7 @@ function calico_diagnostics {
                  chmod +x kubectl-calico
                  ./kubectl-calico diags >> /dev/null
                  latest_file=`ls -td -- /tmp/* | head -n 1`
-                 if [ -d $currwd/calico-logs/calico-diagnostics ]; then rm -rf $currwd/calico-logs/calico-diagnostics; fi
+#                 if [ -d $currwd/calico-logs/calico-diagnostics ]; then rm -rf $currwd/calico-logs/calico-diagnostics; fi
                  cp -R $latest_file/calico-diagnostics $currwd/calico-logs/.
                  echo "Diagnostic bundle produced at $currwd/calico-logs"
                  echo -e "\n"
