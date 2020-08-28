@@ -22,7 +22,11 @@ Bash and python.
 
 
 ```
-kubectl-calicocheck | tee execution-summary
+./calico-cluster-check.sh | tee execution_summary
+
+or
+
+kubectl calicocheck | tee execution_summary
 ```
 
 ### Checks performed

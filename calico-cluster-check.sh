@@ -490,7 +490,7 @@ function display_summary {
         if [ "$setup_type" == "Calico Enterprise" ]
         then
                 echo -e "---------------Note----------------"
-                echo -e "Detailed logs are present in $currwd/calico-logs/calico-diagnostics directory"
+                echo -e "Latest, Detailed logs are present in $currwd/calico-logs/calico-diagnostics directory"
                 echo -e "If required, attach and send $currwd/calico-logs/calico-diagnostics.tar.gz for Tigera team to investigate"
                 echo -e "\n"
                 if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/calico-diagnostics/; fi
