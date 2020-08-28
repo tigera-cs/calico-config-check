@@ -12,7 +12,7 @@ currwd=`pwd`
 tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
 setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"; else echo "Calico"; fi`
 currdate=`date "+%Y.%m.%d-%H.%M.%S"`
-if [ ! -d $currwd/calico-logs ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
+if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
 
 function check_operator_based {
         state=`kubectl get pods -A | grep operator | awk '{print $1}'`
@@ -89,7 +89,7 @@ function check_kubeVersion {
                         OpenShift)
                         ocp_version=$(kubectl get ClusterVersion.config.openshift.io -o jsonpath='{.items[0].status.desired.version}' 2>/dev/null || echo -n 'unknown')
                         ocp_platform=$(kubectl get infrastructure.config.openshift.io -o jsonpath='{.items[0].status.platform}' 2>/dev/null || echo -n 'unknown')
-                        echo -e "OpenShift is running on $ocp_platform and the version is to be $ocp_version"
+                        echo -e "OpenShift is running on $ocp_platform and the version is $ocp_version"
                         ;;
                         *)
                         ;;
@@ -131,7 +131,7 @@ to_octets () {
     second=$((($1&(256*256*255))>>16))
     third=$((($1&(256*255))>>8))
     fourth=$(($1&255))
-    printf "%d.%d.%d.%d\n" "$first" "$second" "$third" "$fourth" 
+    printf "%d.%d.%d.%d\n" "$first" "$second" "$third" "$fourth"
 }
 
 range1="$(read_range $subnet1)"
@@ -444,8 +444,8 @@ function check_tier {
 
 function calico_diagnostics {
         echo -e "--------Calico Diagnostics----------"
-         if [ $(ls kubectl-calico | wc -l) -eq 1 ] 
-         then 
+         if [ $(ls kubectl-calico | wc -l) -eq 1 ]
+         then
                  curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
                  chmod +x kubectl-calico
                  ./kubectl-calico diags >> /dev/null
@@ -454,12 +454,11 @@ function calico_diagnostics {
                  cp -R $latest_file/calico-diagnostics $currwd/calico-logs/.
                  echo "Diagnostic bundle produced at $currwd/calico-logs"
                  echo -e "\n"
-         else 
+         else
                  echo "Please make sure kubectl-calico binary exist at $currwd"
                  failure_array+=("$RED Please make sure kubectl-calico binary exist at $currwd $NC")
                  echo -e "\n"
          fi
-#        curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
 }
 
 function copy_logs {
@@ -485,25 +484,28 @@ function display_summary {
         echo -e "--------Summary of execution--------"
         ( IFS=$'\n'; echo -e "${success_array[*]}")
         echo -e "\n"
-        echo -e "Error Notes "
+        echo -e "---------Error Notes---------"
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
         echo -e "\n"
-        echo -e "---------------Note----------------"
-        echo -e "Detailed logs are present in $currwd/calico-logs/calico-diagnostics directory"
-        echo -e "If required, attach and send $currwd/calico-logs/calico-diagnostics.tar.gz for Tigera team to investigate"
-        echo -e "\n"
-        if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/calico-diagnostics/; fi
-        if [ $(ls kubectl-calico | wc -l) -eq 1 ]
+        if [ "$setup_type" == "Calico Enterprise" ]
         then
-                tar -czvf calico-diagnostics.tar.gz -P $currwd/calico-logs/calico-diagnostics >> /dev/null
-                mv calico-diagnostics.tar.gz $currwd/calico-logs
+                echo -e "---------------Note----------------"
+                echo -e "Detailed logs are present in $currwd/calico-logs/calico-diagnostics directory"
+                echo -e "If required, attach and send $currwd/calico-logs/calico-diagnostics.tar.gz for Tigera team to investigate"
+                echo -e "\n"
+                if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/calico-diagnostics/; fi
+                if [ $(ls kubectl-calico | wc -l) -eq 1 ]
+                then
+                        tar -czvf calico-diagnostics.tar.gz -P $currwd/calico-logs/calico-diagnostics >> /dev/null
+                        mv calico-diagnostics.tar.gz $currwd/calico-logs
+                fi
         fi
+
 }
 
 if [[ "$setup_type" == "Calico Enterprise" ]]
 then
         echo Cluster type is $setup_type
-        update_calico_config_check
         check_operator_based
         check_kubectl_calico_binary
         check_kube_config
@@ -523,13 +525,12 @@ then
         display_summary
 else
         echo Cluster type is $setup_type
-        update_calico_config_check
         check_operator_based
         check_kube_config
         check_kubeVersion
         check_cluster_pod_cidr
         check_kubeapiserver_status
         check_calico_pods
-        copy_logs
         display_summary
 fi
+
