@@ -2,7 +2,8 @@
 Tool for verifying Calico Enterprise installation and configuration
 
 ## Prerequistes
-Bash and python.
+Bash and python. 
+
 
 ## How to use
  1. Clone the repository

@@ -77,6 +77,7 @@ function check_kubeVersion {
                 echo -e "-------Checking Kubernetes Client and Server version-------"
                 client_version=`kubectl version --short | awk 'NR==1{print $3}'`
                 server_version=`kubectl version --short | awk 'NR==2{print $3}'`
+
                 x=`expr "${server_version:3:2}" - "${client_version:3:2}"`
                 x=`echo $x | tr -d -`
 #               echo $x
@@ -85,11 +86,14 @@ function check_kubeVersion {
                 echo -e "The client version is $client_version"
                 echo -e "The server version is $server_version"
                 if [ ! -z $distribution_type ]; then echo -e "Tigera operator CR indicates this is a $distribution_type cluster"; fi
+
                 case $distribution_type in
                         OpenShift)
                         ocp_version=$(kubectl get ClusterVersion.config.openshift.io -o jsonpath='{.items[0].status.desired.version}' 2>/dev/null || echo -n 'unknown')
                         ocp_platform=$(kubectl get infrastructure.config.openshift.io -o jsonpath='{.items[0].status.platform}' 2>/dev/null || echo -n 'unknown')
+
                         echo -e "OpenShift is running on $ocp_platform and the version is $ocp_version"
+
                         ;;
                         *)
                         ;;
@@ -146,18 +150,13 @@ function check_cluster_pod_cidr {
                 echo -e "-------Checking Cluster and Pod CIDRs-------"
                 cluster_cidr=`kubectl cluster-info dump | grep -i "\-\-cluster\-cidr" |grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}' | head -1`
                 if [ -z "$cluster_cidr" ]; then echo "Unable to retrieve the cluster cidr information"; else echo "The cluster cidr is $cluster_cidr"; fi
-
                 pod_cidr=`kubectl get ippool -o yaml | grep cidr | grep -o '[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\.[0-9]\{1,3\}\/[1-9]\{1,2\}'`
                 if [ -z "$pod_cidr" ]; then echo "Unable to retrieve the pod cidr information"; else echo "The pod cidr is $pod_cidr"; fi
-
                 if [  ! -z $pod_cidr ]  &&  [ ! -z $cluster_cidr ]; then cidr_check=$(cidr_check_status $cluster_cidr $pod_cidr); fi
-
                 if [ "$cidr_check" == "True" ] && [ ! -z "$cluster_cidr" ]; then echo "Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr"; success_array+=("$GREEN Pod cidr: $pod_cidr is a subset of Cluster cidr: $cluster_cidr  $NC"); elif [ "$cidr_check" == "False" ] && [ ! -z "$cluster_cidr" ]; then echo "$RED Pod cidr is not a subset of Cluster cidr $NC"; failure_array+=("$RED Pod cidr is not a subset of Cluster cidr $NC"); fi
-
                 if [ -f cidrcheck.py ]; then
                         rm cidrcheck.py
                 fi
-
                 echo -e "\n"
 }
 
