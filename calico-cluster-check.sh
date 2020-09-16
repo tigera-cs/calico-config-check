@@ -463,7 +463,6 @@ function copy_logs {
 	mkdir -p $currwd/calico-logs/calico-diagnostics
         if [ -d $currwd/calico-logs/calico-diagnostics ]
         then
-		#Bikram- What happens to per-node calico_node_error_logs?
                 if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/calico_node_error_logs; fi
                 if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs $currwd/calico-logs/calico-diagnostics/tigera-manager-error.log; rm /tmp/tigera-manager_error_logs; fi
                 if [ -f /tmp/tigera-operator_error_logs ]; then cp /tmp/tigera-operator_error_logs $currwd/calico-logs/calico-diagnostics/tigera-operator-error.log; rm /tmp/tigera-operator_error_logs; fi
@@ -482,7 +481,6 @@ function copy_logs {
 
 
 function calico_telemetry {
-	#Bikram- Do we need pods? Why not just deployments? Also add PSP, node interfaces, and BGPconfiguration.
 	if [ ! -d $currwd/calico-logs/calico-telemetry ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs/calico-telemetry; fi
         calico_telemetry_dir=${currwd}/calico-logs/calico-telemetry
 	calico_diagnostics_dir=${currwd}/calico-logs/calico-diagnostics
@@ -550,7 +548,6 @@ function calico_telemetry {
 	for node in $(kubectl get pods -n calico-system -l k8s-app=calico-node -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
 	        echo "Collecting logs for node: $node"
 	        mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs/${node}
-		#Bikram - Why are the logs under telemetry?
 	        kubectl logs --tail=${tail_lines} -n calico-system $node > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/${node}.log
 	        kubectl exec -n calico-system -t $node -- iptables-save -c > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iptables-save.txt
 	        kubectl exec -n calico-system -t $node -- ip route > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iproute.txt
