@@ -544,7 +544,7 @@ function calico_telemetry {
 
 	echo -e "---------------------------------------------"
 	echo -e "${YELLOW} Collecting per-node calico-node logs... ${NC}"
-	mkdir -p ${calico_telemetry_dir}/per-node-calico-logs
+	mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs
 	for node in $(kubectl get pods -n calico-system -l k8s-app=calico-node -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
 	        echo "Collecting logs for node: $node"
 	        mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs/${node}
