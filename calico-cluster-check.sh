@@ -26,7 +26,7 @@ echo -e "\n"
 
 function check_operator_based {
         state=`kubectl get pods -A | grep operator | awk '{print $1}'`
-        if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
+        if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0;fi
 }
 
 function update_calico_config_check {
@@ -172,7 +172,7 @@ function check_tigera_license {
         license_name=`kubectl get licensekeys.projectcalico.org -o yaml | grep "name:" | awk '{print $2}'`
         calico_enterprise_version=`kubectl get clusterinformations.projectcalico.org default -o yaml | grep -i "cnxVersion" | awk '{print $2}'`
         echo -e "Note: License expiry check is available for Clusters with Calico Enterprise v3.0 onwards"
-        if [ -n $license_name ] && [ "$calico_enterprise_version" == "v3.2.0" ] || [ "$calico_enterprise_version" == "v3.1.0" ] || [ "$calico_enterprise_version" == "v3.0.0" ]
+        if [ -n $license_name ] && [[ "$calico_enterprise_version" == *"v3.2"* ]] || [[ "$calico_enterprise_version" == *"v3.1"* ]] || [[ "$calico_enterprise_version" == *"v3.0"* ]]
         then
                 expiry=`kubectl get licensekeys.projectcalico.org default -o yaml | grep -i "expiry" | awk '{print $2}'`
                 expiry=${expiry%T*}
