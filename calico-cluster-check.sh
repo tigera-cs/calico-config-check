@@ -314,8 +314,11 @@ function check_calico_pods {
                         echo -e "calico-node deamonset is up to date, desired pods are $desired_pod_count and current pods are $current_pod_count"
                         success_array+=("$GREEN calico-node deamonset is up to date $NC")
                 else
-                        echo -e "$RED calico-node deamonset is not up to date, desired pods are $desired_pod_count and current pods are $current_pod_count $NC"
+                        echo -e "$RED calico-node deamonset is not up to date"
+			kubectl get ds -n calico-system calico-node
                         failure_array+=("$RED calico-node deamonset is not up to date $NC")
+			kubectl get ds -n calico-system calico-node >> /tmp/execution_output
+			echo -e "\n" >> /tmp/execution_output
 
                 fi
                 echo -e "\n"
