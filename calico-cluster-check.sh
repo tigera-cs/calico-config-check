@@ -178,9 +178,13 @@ function check_tigera_license {
                 expiry=${expiry%T*}
                 expiry=${expiry#\"}
                 date=$(date '+%Y-%m-%d')
-                if [[ $date <  $expiry ]]
+		if  [[  (( "$date" < "$expiry" )) || (( "$date" == "$expiry" )) ]]
                 then
                         echo -e "${GREEN}Calico Enterprise license is valid till $expiry ${NC}"
+			if [[ (( "$date" == "$expiry" )) ]]
+			then
+				echo -e "${YELLOW}Please contact Tigera team for License renewal${NC}"
+			fi	
                         success_array+=("${GREEN} Calico Enterprise license is valid till $expiry ${NC}")
                 else
                         echo -e "${RED} Calico Enterprise license has expired on $expiry ${NC}"
@@ -231,15 +235,17 @@ function check_es_pvc_status {
                 echo -e "---------------------Storage Class Status---------------------" >> /tmp/execution_output
                 kubectl get sc  | grep 'tigera-elasticsearch' >> /tmp/execution_output
                 echo -e "\n" >> /tmp/execution_output
-                bound_status=`kubectl get pvc -A | grep 'tigera-elasticsearch' | awk '{print $3}'`
-#               log_storage=`kubectl get tigerastatus | grep log-storage | awk '{print $2}'`
-                if [ "$bound_status" == "Bound" ]
+		bound_count=`kubectl get pvc -A | grep 'tigera-elasticsearch' | awk '{print $3}' | wc -l`
+		pvc_count=`kubectl get pvc -A | grep 'tigera-elasticsearch' | wc -l`
+                if [ "$pvc_count" == "$bound_count" ]
                 then
                         echo -e "Elasticsearch PVC is bounded"
                         success_array+=("$GREEN Elasticsearch PVC is bounded $NC")
                 else
-                        echo -e "$RED Elasticsearch PVC is not bouded $NC"
-                        failure_array+=("$RED Elasticsearch PVC is not bouded $NC")
+                        echo -e "$RED All Elasticsearch PVC are not bouded $NC"
+			echo -e "\n"
+			kubectl get pvc -A | grep 'tigera-elasticsearch'
+                        failure_array+=("$RED All Elasticsearch PVC are not bouded $NC")
                 fi
                 echo -e "\n"
 }
