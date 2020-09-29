@@ -1,0 +1,200 @@
+2020-09-29 12:34:50.275 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:34:50.275 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="mangle"
+2020-09-29 12:34:50.277 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="mangle"
+2020-09-29 12:34:50.278 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=3.207221
+2020-09-29 12:34:50.279 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:34:50.279 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="nat"
+2020-09-29 12:34:50.280 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="nat"
+2020-09-29 12:34:50.284 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=4.57437
+2020-09-29 12:34:50.286 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:34:50.286 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="raw"
+2020-09-29 12:34:50.286 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="filter"
+2020-09-29 12:34:50.287 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="raw"
+2020-09-29 12:34:50.289 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="filter"
+2020-09-29 12:34:50.291 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=5.195067
+2020-09-29 12:34:58.683 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:34:58.683 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:34:58.683 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:34:58.685 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.180763ms
+2020-09-29 12:34:58.685 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.58285
+2020-09-29 12:35:09.316 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:35:09.316 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:35:09.316 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:35:09.318 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.172386ms
+2020-09-29 12:35:09.318 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.528146
+2020-09-29 12:35:20.211 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:35:20.211 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:35:20.211 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:35:20.213 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.222312ms
+2020-09-29 12:35:20.213 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.7096520000000002
+2020-09-29 12:35:30.902 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:35:30.902 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:35:30.902 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:35:30.903 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.229793ms
+2020-09-29 12:35:30.903 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.684336
+2020-09-29 12:35:40.968 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:35:40.968 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:35:40.968 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:35:40.970 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.310949ms
+2020-09-29 12:35:40.970 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.736149
+2020-09-29 12:35:47.736 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:35:47.736 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^vxlan.calico$" ipVersion=0x4
+2020-09-29 12:35:47.736 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^eth0$" ipVersion=0x4
+2020-09-29 12:35:47.736 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^cali.*" ipVersion=0x4
+2020-09-29 12:35:47.736 [INFO][47] felix/wireguard.go 534: Queueing a resync of wireguard configuration
+2020-09-29 12:35:47.736 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^wireguard.cali$" ipVersion=0x4
+2020-09-29 12:35:47.736 [INFO][47] felix/route_rule.go 172: Queueing a resync of routing rules. ipVersion=4
+2020-09-29 12:35:47.741 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=4.751251
+2020-09-29 12:35:48.171 [INFO][45] monitor-addresses/startup.go 746: Using autodetected IPv4 address on interface eth0: 10.0.0.11/24
+2020-09-29 12:35:51.176 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:35:51.176 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:35:51.176 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:35:51.178 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.26444ms
+2020-09-29 12:35:51.178 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.7954139999999998
+2020-09-29 12:36:02.063 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:02.063 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:36:02.063 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:36:02.064 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.342218ms
+2020-09-29 12:36:02.064 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.698703
+2020-09-29 12:36:12.098 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:12.098 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:36:12.098 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:36:12.100 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.208779ms
+2020-09-29 12:36:12.100 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.73638
+2020-09-29 12:36:20.277 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:20.277 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="mangle"
+2020-09-29 12:36:20.278 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="mangle"
+2020-09-29 12:36:20.280 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=3.345126
+2020-09-29 12:36:20.284 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:20.284 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="nat"
+2020-09-29 12:36:20.285 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="nat"
+2020-09-29 12:36:20.288 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=4.407747
+2020-09-29 12:36:20.292 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:20.292 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="raw"
+2020-09-29 12:36:20.292 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="filter"
+2020-09-29 12:36:20.293 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="raw"
+2020-09-29 12:36:20.295 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="filter"
+2020-09-29 12:36:20.297 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=5.479742
+2020-09-29 12:36:22.650 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:22.650 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:36:22.650 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:36:22.651 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.267777ms
+2020-09-29 12:36:22.652 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.782122
+2020-09-29 12:36:32.763 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:32.763 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:36:32.763 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:36:32.765 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.367158ms
+2020-09-29 12:36:32.765 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.877013
+2020-09-29 12:36:42.840 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:42.840 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:36:42.840 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:36:42.841 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.341658ms
+2020-09-29 12:36:42.842 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.664453
+2020-09-29 12:36:48.172 [INFO][45] monitor-addresses/startup.go 746: Using autodetected IPv4 address on interface eth0: 10.0.0.11/24
+2020-09-29 12:36:53.813 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:36:53.813 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:36:53.813 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:36:53.815 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.356369ms
+2020-09-29 12:36:53.815 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.744637
+2020-09-29 12:37:04.388 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:04.388 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:37:04.388 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:37:04.389 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.218403ms
+2020-09-29 12:37:04.390 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.658877
+2020-09-29 12:37:14.474 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:14.474 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:37:14.474 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:37:14.475 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.151473ms
+2020-09-29 12:37:14.476 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.734242
+2020-09-29 12:37:18.023 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:18.023 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^vxlan.calico$" ipVersion=0x4
+2020-09-29 12:37:18.023 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^eth0$" ipVersion=0x4
+2020-09-29 12:37:18.023 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^cali.*" ipVersion=0x4
+2020-09-29 12:37:18.023 [INFO][47] felix/wireguard.go 534: Queueing a resync of wireguard configuration
+2020-09-29 12:37:18.023 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^wireguard.cali$" ipVersion=0x4
+2020-09-29 12:37:18.023 [INFO][47] felix/route_rule.go 172: Queueing a resync of routing rules. ipVersion=4
+2020-09-29 12:37:18.028 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=4.681696
+2020-09-29 12:37:25.003 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:25.003 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:37:25.003 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:37:25.004 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.268602ms
+2020-09-29 12:37:25.005 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.768229
+2020-09-29 12:37:36.000 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:36.001 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:37:36.001 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:37:36.002 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.361117ms
+2020-09-29 12:37:36.002 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.801347
+2020-09-29 12:37:46.537 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:46.537 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:37:46.537 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:37:46.538 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.163079ms
+2020-09-29 12:37:46.539 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.641672
+2020-09-29 12:37:48.172 [INFO][45] monitor-addresses/startup.go 746: Using autodetected IPv4 address on interface eth0: 10.0.0.11/24
+2020-09-29 12:37:50.279 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:50.279 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="mangle"
+2020-09-29 12:37:50.280 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="mangle"
+2020-09-29 12:37:50.282 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=2.994637
+2020-09-29 12:37:50.288 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:50.288 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="nat"
+2020-09-29 12:37:50.289 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="nat"
+2020-09-29 12:37:50.292 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=4.245264000000001
+2020-09-29 12:37:50.297 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:50.298 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="raw"
+2020-09-29 12:37:50.298 [INFO][47] felix/table.go 921: Invalidating dataplane cache ipVersion=0x4 reason="refresh timer" table="filter"
+2020-09-29 12:37:50.299 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="raw"
+2020-09-29 12:37:50.300 [INFO][47] felix/table.go 592: Loading current iptables state and checking it is correct. ipVersion=0x4 table="filter"
+2020-09-29 12:37:50.303 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=5.0932379999999995
+2020-09-29 12:37:57.207 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:37:57.207 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:37:57.207 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:37:57.209 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.241692ms
+2020-09-29 12:37:57.209 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.7406609999999998
+2020-09-29 12:38:07.576 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:07.576 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:38:07.576 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:38:07.577 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.255701ms
+2020-09-29 12:38:07.577 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.733426
+2020-09-29 12:38:17.610 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:17.611 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:38:17.611 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:38:17.612 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.275331ms
+2020-09-29 12:38:17.612 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.7360069999999999
+2020-09-29 12:38:28.366 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:28.366 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:38:28.366 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:38:28.368 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.340954ms
+2020-09-29 12:38:28.368 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.84051
+2020-09-29 12:38:38.695 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:38.695 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:38:38.695 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:38:38.697 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.185557ms
+2020-09-29 12:38:38.697 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.647481
+2020-09-29 12:38:48.173 [INFO][45] monitor-addresses/startup.go 746: Using autodetected IPv4 address on interface eth0: 10.0.0.11/24
+2020-09-29 12:38:49.000 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:49.001 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:38:49.001 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:38:49.002 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.143485ms
+2020-09-29 12:38:49.002 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.594852
+2020-09-29 12:38:55.352 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:55.352 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^vxlan.calico$" ipVersion=0x4
+2020-09-29 12:38:55.352 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^eth0$" ipVersion=0x4
+2020-09-29 12:38:55.352 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^cali.*" ipVersion=0x4
+2020-09-29 12:38:55.352 [INFO][47] felix/wireguard.go 534: Queueing a resync of wireguard configuration
+2020-09-29 12:38:55.352 [INFO][47] felix/route_table.go 398: Queueing a resync of routing table. ifaceRegex="^wireguard.cali$" ipVersion=0x4
+2020-09-29 12:38:55.352 [INFO][47] felix/route_rule.go 172: Queueing a resync of routing rules. ipVersion=4
+2020-09-29 12:38:55.357 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=5.353497
+2020-09-29 12:38:59.621 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:38:59.621 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:38:59.621 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:38:59.623 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.291442ms
+2020-09-29 12:38:59.623 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.617576
+2020-09-29 12:39:09.730 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:39:09.730 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:39:09.730 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:39:09.731 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.23196ms
+2020-09-29 12:39:09.732 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.70046
+2020-09-29 12:39:19.993 [INFO][47] felix/int_dataplane.go 1300: Applying dataplane updates
+2020-09-29 12:39:19.993 [INFO][47] felix/ipsets.go 223: Asked to resync with the dataplane on next update. family="inet"
+2020-09-29 12:39:19.994 [INFO][47] felix/ipsets.go 306: Resyncing ipsets with dataplane. family="inet"
+2020-09-29 12:39:19.995 [INFO][47] felix/ipsets.go 356: Finished resync family="inet" numInconsistenciesFound=0 resyncDuration=1.185667ms
+2020-09-29 12:39:19.995 [INFO][47] felix/int_dataplane.go 1314: Finished applying updates to dataplane. msecToApply=1.624397

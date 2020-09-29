@@ -1,0 +1,55 @@
+[0;32mThe Cluster GUID is c8425c780fa240239c329f2d0a9f5c88 [0m
+
+
+[0;33m[1mCluster type is Calico[0m
+-------Checking and exporting kubconfig-------
+kubeconfig exists at /home/ubuntu/.kube/config.
+KUBECONFIG is set to /home/ubuntu/.kube/config
+
+
+-------Checking Kubernetes Client and Server version-------
+Kubernetes client and server Minor Versions are in range
+The client version is v1.18.0
+The server version is v1.18.9
+
+
+-------Checking Cluster and Pod CIDRs-------
+The cluster cidr is 10.48.0.0/16
+The pod cidr is 10.48.0.0/16
+Pod cidr: 10.48.0.0/16 is a subset of Cluster cidr: 10.48.0.0/16
+
+
+-------Checking kube-apiserver status-------
+kube-apiserver pod is Running
+
+
+-------Checking calico-node damonset status-------
+calico-node deamonset is up to date, desired pods are 3 and current pods are 3
+
+
+-------Checking calico-node pod logs-------
+No errors found in calico-node pods
+---------------------------------------------
+[0;33m Collecting per-node calico-node logs... [0m
+Collecting logs for node: calico-node-9mtmj
+Collecting logs for node: calico-node-cmskr
+Collecting logs for node: calico-node-r9m89
+Logs present at /home/ubuntu/calico-config-check/calico-logs/calico-diagnostics/per-node-calico-logs
+---------------------------------------------
+
+
+--------Summary of execution--------
+[0;32m Pod cidr: 10.48.0.0/16 is a subset of Cluster cidr: 10.48.0.0/16  [0m
+[0;32m kube-apiserver pod is Running [0m
+[0;32m calico-node deamonset is up to date [0m
+
+
+---------Error Notes---------
+
+
+
+---------------Note----------------
+Logs are present in /home/ubuntu/calico-config-check/calico-logs  directory
+[0;33m[1mPlease send /home/ubuntu/calico-config-check/calico-logs.tar.gz for Tigera team to investigate[0m
+
+
