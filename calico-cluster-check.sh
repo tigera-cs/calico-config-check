@@ -180,7 +180,11 @@ function check_tigera_license {
                 expiry=${expiry%T*}
                 expiry=${expiry#\"}
                 date=$(date '+%Y-%m-%d')
-		if  [[  (( "$date" < "$expiry" )) || (( "$date" == "$expiry" )) ]]
+		if [[  (( "$expiry" == "null" )) ]]
+		then
+			echo -e "${RED} Calico Enterprise license has expired ${NC}"
+                        failure_array+=("${RED} Calico Enterprise license has expired ${NC}")
+		elif  [[  (( "$date" < "$expiry" )) || (( "$date" == "$expiry" )) ]]
                 then
                         echo -e "${GREEN}Calico Enterprise license is valid till $expiry ${NC}"
 			if [[ (( "$date" == "$expiry" )) ]]
@@ -188,9 +192,6 @@ function check_tigera_license {
 				echo -e "${YELLOW}Please contact Tigera team for License renewal${NC}"
 			fi	
                         success_array+=("${GREEN} Calico Enterprise license is valid till $expiry ${NC}")
-                else
-                        echo -e "${RED} Calico Enterprise license has expired on $expiry ${NC}"
-                        failure_array+=("${RED} Calico Enterprise license has expired on $expiry ${NC}")
                 fi
         elif [[ $license_name == "" ]]
         then
