@@ -1,31 +1,35 @@
 #!/bin/bash
 
-grep_filter="grep -i error"
+# These variables can be customized
+grep_filter="egrep -i error\|failed"
+tail_lines=200
+
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
 NC='\033[0m'
+BOLD='\033[1m'
 kubeconfig=$HOME/.kube/config
 failure_array=()
 success_array=()
 currwd=`pwd`
+calico_telemetry_dir=${currwd}/calico-logs/calico-telemetry
+calico_diagnostics_dir=${currwd}/calico-logs/calico-diagnostics
 tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
 setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"; else echo "Calico"; fi`
 currdate=`date "+%Y.%m.%d-%H.%M.%S"`
 if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
 
+if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
+
+cluster_guid=`kubectl get clusterinformations.crd.projectcalico.org default -oyaml | grep "[^f:]clusterGUID:" | awk '{print $2}'`
+echo -e "${GREEN}The Cluster GUID is ${cluster_guid} ${NC}"
+echo -e "\n"
+
 function check_operator_based {
         state=`kubectl get pods -A | grep operator | awk '{print $1}'`
-        if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0; else echo "Executing checks....."; echo "";fi
+        if [[ -z "$state" ]]; then echo "Cluster is not Operator based, this script works only for Operator based Calico Installation"; exit 0;fi
 }
-
-function check_kubectl_calico_binary {
-        echo "------------------------kubectl-calico binary check------------------------"
-        if [ $(ls kubectl-calico | wc -l) -eq 1 ]; then echo "kubectl-calico binary exists at $currwd,  execution will continue"; else echo "Please make sure kubectl-calico binary exists at $
-currwd"; fi
-        echo -e "\n"
-}
-
 
 function update_calico_config_check {
         currwd=`pwd`
@@ -80,7 +84,6 @@ function check_kubeVersion {
 
                 x=`expr "${server_version:3:2}" - "${client_version:3:2}"`
                 x=`echo $x | tr -d -`
-#               echo $x
                 if [ $x -gt 1 ]; then echo -e "$YELLOW Warn: Difference between the Kubernetes client and server Minor Versions shouldn't be more than 1 $NC"; else echo "Kubernetes client and server Minor Versions are in range"; fi
                 distribution_type=$(kubectl get Installation.operator.tigera.io -o jsonpath='{.items[0].spec.kubernetesProvider}' 2>/dev/null || echo -n 'unknown')
                 echo -e "The client version is $client_version"
@@ -105,11 +108,6 @@ function check_kubeVersion {
 function cidr_check_status {
 subnet1="$1"
 subnet2="$2"
-
-# calculate min and max of subnet1
-# calculate min and max of subnet2
-# find the common range (check_overlap)
-# print it if there is one
 
 read_range () {
     IFS=/ read ip mask <<<"$1"
@@ -176,24 +174,29 @@ function check_tigera_license {
         license_name=`kubectl get licensekeys.projectcalico.org -o yaml | grep "name:" | awk '{print $2}'`
         calico_enterprise_version=`kubectl get clusterinformations.projectcalico.org default -o yaml | grep -i "cnxVersion" | awk '{print $2}'`
         echo -e "Note: License expiry check is available for Clusters with Calico Enterprise v3.0 onwards"
-        if [ -n $license_name ] && [ "$calico_enterprise_version" == "v3.2.0" ] || [ "$calico_enterprise_version" == "v3.1.0" ] || [ "$calico_enterprise_version" == "v3.0.0" ]
+        if [ -n $license_name ] && [[ "$calico_enterprise_version" == *"v3.2"* ]] || [[ "$calico_enterprise_version" == *"v3.1"* ]] || [[ "$calico_enterprise_version" == *"v3.0"* ]]
         then
                 expiry=`kubectl get licensekeys.projectcalico.org default -o yaml | grep -i "expiry" | awk '{print $2}'`
                 expiry=${expiry%T*}
                 expiry=${expiry#\"}
                 date=$(date '+%Y-%m-%d')
-                if [[ $date <  $expiry ]]
+		if [[  (( "$expiry" == "null" )) ]]
+		then
+			echo -e "${RED} Calico Enterprise license has expired ${NC}"
+                        failure_array+=("${RED} Calico Enterprise license has expired ${NC}")
+		elif  [[  (( "$date" < "$expiry" )) || (( "$date" == "$expiry" )) ]]
                 then
-                        echo -e "$GREEN Calico Enterprise license is valid till $expiry $NC"
-                        success_array+=("$GREEN Calico Enterprise license is valid till $expiry $NC")
-                else
-                        echo -e "$RED Calico Enterprise license has expired $NC on $expiry"
-                        failure_array+=("$RED Calico Enterprise license has expired $NC on $expiry $NC")
+                        echo -e "${GREEN}Calico Enterprise license is valid till $expiry ${NC}"
+			if [[ (( "$date" == "$expiry" )) ]]
+			then
+				echo -e "${YELLOW}Please contact Tigera team for License renewal${NC}"
+			fi	
+                        success_array+=("${GREEN} Calico Enterprise license is valid till $expiry ${NC}")
                 fi
         elif [[ $license_name == "" ]]
         then
-                echo -e "$RED Calico enterprise license is not applied $NC"
-                failure_array+=("$RED Calico enterprise license is not applied $NC")
+                echo -e "${RED} Calico enterprise license is not applied ${NC}"
+                failure_array+=("${RED} Calico enterprise license is not applied ${NC}")
         fi
         echo -e "\n"
 
@@ -202,8 +205,11 @@ function check_tigera_license {
 
 
 function check_tigerastatus {
-                echo -e "-------Checking Tigera Components-------"
-                tigera_components=(apiserver calico compliance intrusion-detection log-collector log-storage manager)
+                echo -e "-------Checking Tigera Components-------" >> /tmp/execution_output
+		kubectl get tigerastatus >> /tmp/execution_output
+		echo -e "\n" >> /tmp/execution_output
+		echo -e "-------Checking Tigera Components-------"
+		tigera_components=(apiserver calico compliance intrusion-detection log-collector log-storage manager)
                 for i in "${tigera_components[@]}"
                 do
                         available=`kubectl get tigerastatus | grep $i | awk '{print $2}'`
@@ -232,15 +238,17 @@ function check_es_pvc_status {
                 echo -e "---------------------Storage Class Status---------------------" >> /tmp/execution_output
                 kubectl get sc  | grep 'tigera-elasticsearch' >> /tmp/execution_output
                 echo -e "\n" >> /tmp/execution_output
-                bound_status=`kubectl get pvc -A | grep 'tigera-elasticsearch' | awk '{print $3}'`
-#               log_storage=`kubectl get tigerastatus | grep log-storage | awk '{print $2}'`
-                if [ "$bound_status" == "Bound" ]
+		bound_count=`kubectl get pvc -A | grep 'tigera-elasticsearch' | awk '{print $3}' | wc -l`
+		pvc_count=`kubectl get pvc -A | grep 'tigera-elasticsearch' | wc -l`
+                if [ "$pvc_count" == "$bound_count" ]
                 then
                         echo -e "Elasticsearch PVC is bounded"
                         success_array+=("$GREEN Elasticsearch PVC is bounded $NC")
                 else
-                        echo -e "$RED Elasticsearch PVC is not bouded $NC"
-                        failure_array+=("$RED Elasticsearch PVC is not bouded $NC")
+                        echo -e "$RED All Elasticsearch PVC are not bouded $NC"
+			echo -e "\n"
+			kubectl get pvc -A | grep 'tigera-elasticsearch'
+                        failure_array+=("$RED All Elasticsearch PVC are not bouded $NC")
                 fi
                 echo -e "\n"
 }
@@ -315,30 +323,50 @@ function check_calico_pods {
                         echo -e "calico-node deamonset is up to date, desired pods are $desired_pod_count and current pods are $current_pod_count"
                         success_array+=("$GREEN calico-node deamonset is up to date $NC")
                 else
-                        echo -e "$RED calico-node deamonset is not up to date, desired pods are $desired_pod_count and current pods are $current_pod_count $NC"
+                        echo -e "$RED calico-node deamonset is not up to date${NC}"
+			kubectl get ds -n calico-system calico-node
                         failure_array+=("$RED calico-node deamonset is not up to date $NC")
+			kubectl get ds -n calico-system calico-node >> /tmp/execution_output
+			echo -e "\n" >> /tmp/execution_output
 
                 fi
                 echo -e "\n"
                 echo -e "-------Checking calico-node pod logs-------"
-                kubectl logs -l k8s-app=calico-node -n calico-system | $grep_filter >> calico_node_error_logs
+                kubectl logs --tail=${tail_lines}  -l k8s-app=calico-node -n calico-system | $grep_filter >> calico_node_error_logs
                 [ -s calico_node_error_logs ]
                 if [ $? == 0 ]
                 then
                         cp calico_node_error_logs /tmp/
-                        echo -e "$RED Error logs found, logs present in file /tmp/calico_node_error_logs $NC"
-                        failure_array+=("$RED calico-node : Error logs found, logs present in file /tmp/calico_node_error_logs $NC")
+                        echo -e "$RED Error logs found, logs present in file $currwd/calico-logs/calico-diagnostics/calico-node-error.log $NC"
+                        failure_array+=("$RED calico-node : Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/calico-node-error.log $NC")
                         rm calico_node_error_logs
                 else
                         echo -e "No errors found in calico-node pods"
 
                 fi
-                echo "Complete calico-node logs are dumped at /tmp/calico_node_logs"
-                kubectl logs -l k8s-app=calico-node -n calico-system >> /tmp/calico_node_logs
                 if [ -f calico_node_error_logs ]
                 then
                         rm calico_node_error_logs
-                fi
+		fi
+		if [ "$setup_type" == "Calico Enterprise" ]
+		then
+			echo -e "calico-node logs will be present at ${calico_diagnostics_dir}/per-node-calico-logs once script execution completes"
+		elif [ "$setup_type" == "Calico" ]
+		then
+			        echo -e "---------------------------------------------"
+        			echo -e "${YELLOW} Collecting per-node calico-node logs... ${NC}"
+        			mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs
+        			for node in $(kubectl get pods -n calico-system -l k8s-app=calico-node -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
+                			echo "Collecting logs for node: $node"
+                			mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs/${node}
+                			kubectl logs --tail=${tail_lines} -n calico-system $node > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/${node}.log
+                			kubectl exec -n calico-system -t $node -- iptables-save -c > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iptables-save.txt
+                			kubectl exec -n calico-system -t $node -- ip route > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iproute.txt
+                		done
+        			echo -e "Logs present at ${calico_diagnostics_dir}/per-node-calico-logs"
+        			echo -e "---------------------------------------------"
+		fi
+
                 echo -e "\n"
 
 }
@@ -355,17 +383,17 @@ function check_tigera_pods {
                 echo -e "\n" >> /tmp/execution_output
                 echo -e "\n"
                 echo -e "-------Checking $i pod logs-------"
-                kubectl logs -n $i -l k8s-app=$i -c $i | $grep_filter  >> ${i}_error_logs
+                kubectl logs --tail=${tail_lines} -n $i -l k8s-app=$i -c $i | $grep_filter  >> ${i}_error_logs
+                kubectl logs --tail=${tail_lines} -n $i -l k8s-app=$i -c $i >> /tmp/${i}_logs
                 [ -s ${i}_error_logs ]
                 if [ $? == 0 ]
                 then
                         cp ${i}_error_logs /tmp/
-                        echo -e "$RED Error logs found, logs present in file /tmp/${i}_error_logs $NC"
-                        failure_array+=("$RED ${i} : Error logs found, logs present in file /tmp/ /tmp/${i}_error_logs $NC")
+                        echo -e "$RED Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/${i}_error_logs $NC"
+                        failure_array+=("$RED ${i} : Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/${i}-error.log $NC")
                         rm ${i}_error_logs
                 else
-                        kubectl logs -n $i -l k8s-app=$i -c $i >> /tmp/${i}_logs
-                        echo -e "No errors found in ${i}, logs present at /tmp/${i}_logs"
+                        echo -e "No errors found in ${i}, complete logs will be present at ${currwd}/calico-logs/calico-diagnostics/${i}.log"
                 fi
                 if [ -f tigera-manager_error_logs ]
                 then
@@ -384,17 +412,17 @@ function check_tigera_pods {
         echo -e "\n" >> /tmp/execution_output
         echo -e "\n"
         echo -e "-------Checking tigera-kibana pod logs-------"
-        kubectl logs -n tigera-kibana -l k8s-app=tigera-secure | $grep_filter  >> tigera_secure_error_logs
+        kubectl logs --tail=${tail_lines} -n tigera-kibana -l k8s-app=tigera-secure | $grep_filter  >> tigera_secure_error_logs
+        kubectl logs --tail=${tail_lines} -n tigera-kibana -l k8s-app=tigera-secure >> /tmp/tigera_secure_logs
         [ -s tigera_secure_error_logs ]
         if [ $? == 0 ]
         then
                 cp tigera_secure_error_logs /tmp/
-                echo -e "$RED Error logs found, logs present in file /tmp/tigera_secure_error_logs $NC"
-                failure_array+=("$RED tigera-secure : tigera-secure Error logs found, logs present in file /tmp/tigera_secure_error_logs $NC")
+                echo -e "$RED Error logs found, logs present in file $currwd/calico-logs/calico-diagnostics/tigera-secure-error.log $NC"
+                failure_array+=("$RED tigera-secure : tigera-secure Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/tigera-secure-error.log $NC")
                 rm tigera_secure_error_logs
         else
-                kubectl logs -n tigera-kibana -l k8s-app=tigera-secure >> /tmp/tigera_secure_logs
-                echo -e "No errors found in tigera_secure, logs present at /tmp/tigera_secure_logs"
+                echo -e "No errors found in tigera_secure, complete logs will be present at  $currwd/calico-logs/calico-diagnostics/tigera-secure.log"
         fi
         echo -e "\n"
         echo -e "-------tigera-fluentd pod status-------"
@@ -404,16 +432,16 @@ function check_tigera_pods {
         echo -e "\n" >> /tmp/execution_output
         echo -e "\n"
         echo -e "-------Checking tigera-fluentd pod logs-------"
-        kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node | $grep_filter  >> fluentd_node_error_logs
+        kubectl logs --tail=${tail_lines} -n tigera-fluentd -l k8s-app=fluentd-node | $grep_filter  >> fluentd_node_error_logs
+        kubectl logs --tail=${tail_lines} -n tigera-fluentd -l k8s-app=fluentd-node >> /tmp/fluentd_node_logs
         [ -s fluentd_node_error_logs ]
         if [ $? == 0 ]
         then
                 cp fluentd_node_error_logs /tmp/
-                echo -e "$RED Error logs found, logs present in file /tmp/fluentd_node_error_logs $NC"
+                echo -e "$RED Error logs found, logs present in file $currwd/calico-logs/calico-diagnostics/fluentd-node-error.log $NC"
                 rm fluentd_node_error_logs
         else
-                 kubectl logs -n tigera-fluentd -l k8s-app=fluentd-node >> /tmp/fluentd_node_logs
-                 echo -e "No errors found in fluentd-node, logs present at /tmp/fluentd_node_logs"
+                 echo -e "No errors found in fluentd-node pods, complete logs wil be present at $currwd/calico-logs/calico-diagnostics/fluentd-nodes.log"
         fi
         if [ -f tigera_secure_error_logs ]
         then
@@ -442,7 +470,7 @@ function check_tier {
 }
 
 function calico_diagnostics {
-        echo -e "--------Calico Diagnostics----------"
+         echo -e "--------Calico Diagnostics----------"
          if [ $(ls kubectl-calico | wc -l) -eq 1 ]
          then
                  curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
@@ -461,23 +489,228 @@ function calico_diagnostics {
 }
 
 function copy_logs {
-        if [ -d $currwd/calico-logs/calico-diagnostics ]
+	if [ ! -d $currwd/calico-logs/calico-diagnostics ]
+	then
+		mkdir -p $currwd/calico-logs/calico-diagnostics
+	fi
+	if [ -d $currwd/calico-logs/calico-diagnostics ] && [ "$setup_type" == "Calico" ]
+	then
+                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
+		if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/commands-output; rm /tmp/execution_output; fi
+	fi
+        if [ -d $currwd/calico-logs/calico-diagnostics ] && [ "$setup_type" == "Calico Enterprise" ]
         then
-                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/calico_node_error_logs; fi
-                if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-manager_error_logs; fi
-                if [ -f /tmp/tigera-operator_error_logs ]; then cp /tmp/tigera-operator_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-operator_error_logs; fi
-                if [ -f /tmp/tigera_secure_error_logs ]; then cp /tmp/tigera_secure_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera_secure_error_logs; fi
-                if [ -f /tmp/fluentd_node_error_logs ]; then cp /tmp/fluentd_node_error_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/fluentd_node_error_logs; fi
-                if [ -f /tmp/tigera_secure_logs ]; then cp /tmp/tigera_secure_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera_secure_logs; fi
-                if [ -f /tmp/fluentd_node_logs ]; then cp /tmp/fluentd_node_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/fluentd_node_logs; fi
-                if [ -f /tmp/tigera-manager_logs ]; then cp /tmp/tigera-manager_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-manager_logs; fi
-                if [ -f /tmp/tigera-operator_logs ]; then cp /tmp/tigera-operator_logs $currwd/calico-logs/calico-diagnostics/; rm /tmp/tigera-operator_logs; fi
-                if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/; rm /tmp/execution_output; fi
+                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
+                if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs $currwd/calico-logs/calico-diagnostics/tigera-manager-error.log; rm /tmp/tigera-manager_error_logs; fi
+                if [ -f /tmp/tigera-operator_error_logs ]; then cp /tmp/tigera-operator_error_logs $currwd/calico-logs/calico-diagnostics/tigera-operator-error.log; rm /tmp/tigera-operator_error_logs; fi
+                if [ -f /tmp/tigera_secure_error_logs ]; then cp /tmp/tigera_secure_error_logs $currwd/calico-logs/calico-diagnostics/tigera-secure-error.log; rm /tmp/tigera_secure_error_logs; fi
+                if [ -f /tmp/fluentd_node_error_logs ]; then cp /tmp/fluentd_node_error_logs $currwd/calico-logs/calico-diagnostics/fluentd-node-error.log; rm /tmp/fluentd_node_error_logs; fi
+                if [ -f /tmp/tigera_secure_logs ]; then cp /tmp/tigera_secure_logs $currwd/calico-logs/calico-diagnostics/tigera-secure.log; rm /tmp/tigera_secure_logs; fi
+                if [ -f /tmp/fluentd_node_logs ]; then cp /tmp/fluentd_node_logs $currwd/calico-logs/calico-diagnostics/fluentd-nodes.log; rm /tmp/fluentd_node_logs; fi
+                if [ -f /tmp/tigera-manager_logs ]; then cp /tmp/tigera-manager_logs $currwd/calico-logs/calico-diagnostics/tigera-manager.log; rm /tmp/tigera-manager_logs; fi
+                if [ -f /tmp/tigera-operator_logs ]; then cp /tmp/tigera-operator_logs $currwd/calico-logs/calico-diagnostics/tigera-operator.log; rm /tmp/tigera-operator_logs; fi
+                if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/commands-output; rm /tmp/execution_output; fi
 
         fi
 
 
 }
+
+
+function calico_telemetry {
+	if [ ! -d $currwd/calico-logs/calico-telemetry ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs/calico-telemetry; fi
+        calico_telemetry_dir=${currwd}/calico-logs/calico-telemetry
+	calico_diagnostics_dir=${currwd}/calico-logs/calico-diagnostics
+	echo -e "${YELLOW}==============Calico Telemetry collection==============${NC}"
+	echo -e "\n"
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting nodes statistics... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/nodes
+	kubectl get nodes -o yaml > ${calico_telemetry_dir}/nodes/nodes-yaml.yaml
+	kubectl get nodes -o wide > ${calico_telemetry_dir}/nodes/nodes.txt
+	echo -e "Logs present at ${calico_telemetry_dir}/nodes"
+	echo -e "---------------------------------------------"	
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting pods statistics... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/pods
+	kubectl get pods --all-namespaces -o yaml > ${calico_telemetry_dir}/pods/pods-yaml.yaml
+	kubectl get pods --all-namespaces -o wide > ${calico_telemetry_dir}/pods/pods.txt
+	echo -e "Logs present at ${calico_telemetry_dir}/pods"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+        echo -e "${YELLOW} Collecting deployments statistics... ${NC}"
+        mkdir -p ${calico_telemetry_dir}/deployments
+        kubectl get deployments --all-namespaces -o yaml > ${calico_telemetry_dir}/deployments/deployments-yaml.yaml
+        kubectl get deployments --all-namespaces -o wide > ${calico_telemetry_dir}/deployments/deployments.txt
+        echo -e "Logs present at ${calico_telemetry_dir}/deployments"
+        echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+        echo -e "${YELLOW} Collecting daemonsets statistics... ${NC}"
+        mkdir -p ${calico_telemetry_dir}/daemonsets
+        kubectl get daemonsets --all-namespaces -o yaml > ${calico_telemetry_dir}/daemonsets/daemonsets-yaml.yaml
+        kubectl get daemonsets --all-namespaces -o wide > ${calico_telemetry_dir}/daemonsets/daemonsets.txt
+        echo -e "Logs present at ${calico_telemetry_dir}/daemonsets"
+        echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting services statistics... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/services
+	kubectl get services --all-namespaces -o wide > ${calico_telemetry_dir}/services/services.txt
+	kubectl get services --all-namespaces -o yaml > ${calico_telemetry_dir}/services/services-yaml.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/services"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting configmaps statistics... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/configmaps
+	kubectl get configmaps --all-namespaces  > ${calico_telemetry_dir}/configmaps/configmaps.txt
+	kubectl get configmaps --all-namespaces -o yaml > ${calico_telemetry_dir}/configmaps/configmaps.txt
+	echo -e "Logs present at ${calico_telemetry_dir}/configmaps"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting IPAM diagnostics... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/ipam
+	kubectl get ipamblocks -o yaml > ${calico_telemetry_dir}/ipam/ipamblocks.yaml
+	kubectl get blockaffinities -o yaml > ${calico_telemetry_dir}/ipam/blockaffinities.yaml
+	kubectl get ipamhandles -o yaml > ${calico_telemetry_dir}/ipam/ipamhandles.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/ipam"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting per-node calico-node logs... ${NC}"
+	mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs
+	for node in $(kubectl get pods -n calico-system -l k8s-app=calico-node -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
+	        echo "Collecting logs for node: $node"
+	        mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs/${node}
+	        kubectl logs --tail=${tail_lines} -n calico-system $node > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/${node}.log
+	        kubectl exec -n calico-system -t $node -- iptables-save -c > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iptables-save.txt
+	        kubectl exec -n calico-system -t $node -- ip route > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iproute.txt
+	        done
+	echo -e "Logs present at ${calico_diagnostics_dir}/per-node-calico-logs"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting calico-typha logs... ${NC}"
+	mkdir -p ${calico_diagnostics_dir}/calico-typha
+	for typha in $(kubectl get pods -n calico-system -l k8s-app=calico-typha -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
+	        kubectl logs --tail=${tail_lines} -n calico-system $typha > ${calico_diagnostics_dir}/calico-typha/${typha}.log
+	        done
+	echo -e "Logs present at ${calico_diagnostics_dir}/calico-typha"
+	echo -e "---------------------------------------------"
+
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting Tier information... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/tiers
+	kubectl get tier.projectcalico.org -o yaml > ${calico_telemetry_dir}/tiers/tiers.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/tiers"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting network policy data for each tier... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/network-policies
+	kubectl get networkpolicies.p -A -l projectcalico.org/tier==allow-tigera -o yaml > ${calico_telemetry_dir}/network-policies/allow-tigera-np.yaml
+	kubectl get networkpolicies.p -A -l projectcalico.org/tier==default -o yaml > ${calico_telemetry_dir}/network-policies/default-tier-np.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/network-policies"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting global network policies... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/global-network-policies
+	kubectl get globalnetworkpolicies.projectcalico.org -o yaml > ${calico_telemetry_dir}/global-network-policies/global-network-policies.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/global-network-policies"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting bgp statistics... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/bgp-statistics
+	kubectl get bgppeers.projectcalico.org -o yaml > ${calico_telemetry_dir}/bgp-statistics/bgppeers.yaml
+	echo -e "Logs present at  ${calico_telemetry_dir}/bgp-statistics"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting cluster information... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/clusterinformations
+	kubectl get clusterinformations.projectcalico.org -o yaml > ${calico_telemetry_dir}/clusterinformations/clusterinformations.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/clusterinformations"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting hostendpoints information... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/hostendpoints
+	kubectl get hostendpoints.projectcalico.org -o yaml > ${calico_telemetry_dir}/hostendpoints/hostendpoints.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/hostendpoints"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting ippool information... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/ippools
+	kubectl get ippools.projectcalico.org -o yaml > ${calico_telemetry_dir}/ippools/ippools.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/ippools"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting felixconfigurations... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/felixconfigurations
+	kubectl get felixconfigurations.projectcalico.org -o yaml > ${calico_telemetry_dir}/felixconfigurations/felixconfigurations.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/felixconfigurations"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting licensekey data... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/licensekeys
+	kubectl get licensekeys.projectcalico.org -o yaml > ${calico_telemetry_dir}/licensekeys/licensekeys.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/licensekeys"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting tigera components statistics (apiserver, calico, compliance, intrusion-detection, log-collector, log-storage, manager)... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/tigerastatus
+	kubectl get tigerastatuses.operator.tigera.io -o yaml  > ${calico_telemetry_dir}/tigerastatus/tigerastatus-yaml.yaml
+	kubectl get installations -o yaml > ${calico_telemetry_dir}/tigerastatus/installations.yaml
+	kubectl get apiservers -o yaml > ${calico_telemetry_dir}/tigerastatus/apiservers.yaml
+	kubectl get compliances -o yaml > ${calico_telemetry_dir}/tigerastatus/compliances.yaml
+	kubectl get intrusiondetections -o yaml > ${calico_telemetry_dir}/tigerastatus/intrusiondetections.yaml
+	kubectl get managers -o yaml > ${calico_telemetry_dir}/tigerastatus/managers.yaml
+	kubectl get logcollectors -o yaml > ${calico_telemetry_dir}/tigerastatus/logcollectors.yaml
+	kubectl get logstorages -o yaml > ${calico_telemetry_dir}/tigerastatus/logstorages.yaml
+	kubectl get managementclusterconnections -o yaml > ${calico_telemetry_dir}/tigerastatus/managementclusterconnections.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/tigerastatus"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting networksets and global networksets data... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/networksets
+	kubectl get networksets.projectcalico.org -o yaml > ${calico_telemetry_dir}/networksets/networksets.yaml
+	kubectl get globalnetworksets.crd.projectcalico.org -o yaml > ${calico_telemetry_dir}/networksets/global-networksets.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/networksets"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting managedclusters data... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/managedclusters
+	kubectl get managedclusters.projectcalico.org -o yaml > ${calico_telemetry_dir}/managedclusters/managedclusters.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/managedclusters"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting kube-controllers configurations... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/kubecontrollersconfigurations
+	kubectl get kubecontrollersconfigurations.projectcalico.org -o yaml > ${calico_telemetry_dir}/kubecontrollersconfigurations/kubecontrollersconfigurations.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/kubecontrollersconfigurations"
+	echo -e "---------------------------------------------"
+
+	echo -e "---------------------------------------------"
+	echo -e "${YELLOW} Collecting globalalerts configurations... ${NC}"
+	mkdir -p ${calico_telemetry_dir}/globalalerts
+	kubectl get globalalerts.projectcalico.org -o yaml > ${calico_telemetry_dir}/globalalerts/globalalerts.yaml
+	echo -e "Logs present at ${calico_telemetry_dir}/globalalerts"
+	echo -e "---------------------------------------------"
+}
+
 
 function display_summary {
         echo -e "--------Summary of execution--------"
@@ -486,27 +719,22 @@ function display_summary {
         echo -e "---------Error Notes---------"
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
         echo -e "\n"
-        if [ "$setup_type" == "Calico Enterprise" ]
-        then
-                echo -e "---------------Note----------------"
-                echo -e "Latest, Detailed logs are present in $currwd/calico-logs/calico-diagnostics directory"
-                echo -e "If required, attach and send $currwd/calico-logs/calico-diagnostics.tar.gz for Tigera team to investigate"
-                echo -e "\n"
-                if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/calico-diagnostics/; fi
-                if [ $(ls kubectl-calico | wc -l) -eq 1 ]
-                then
-                        tar -czvf calico-diagnostics.tar.gz -P $currwd/calico-logs/calico-diagnostics >> /dev/null
-                        mv calico-diagnostics.tar.gz $currwd/calico-logs
-                fi
-        fi
+#        if [ "$setup_type" == "Calico Enterprise" ] || 
+#        then
+        echo -e "---------------Note----------------"
+	echo -e "Logs are present in $currwd/calico-logs  directory"
+        echo -e "${YELLOW}${BOLD}Please send $currwd/calico-logs.tar.gz for Tigera team to investigate${NC}"
+        echo -e "\n"
+        if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/; fi
+	tar -czvf calico-logs.tar.gz -P $currwd/calico-logs/ >> /dev/null
+#	fi
 
 }
 
 if [[ "$setup_type" == "Calico Enterprise" ]]
 then
-        echo Cluster type is $setup_type
+        echo -e "${YELLOW}${BOLD}Cluster type is $setup_type${NC}"
         check_operator_based
-        check_kubectl_calico_binary
         check_kube_config
         check_kubeVersion
         check_cluster_pod_cidr
@@ -519,17 +747,19 @@ then
         check_calico_pods
         check_tigera_pods
         check_tier
-        calico_diagnostics
+#        calico_diagnostics
         copy_logs
+	calico_telemetry
         display_summary
 else
-        echo Cluster type is $setup_type
+        echo -e "${YELLOW}${BOLD}Cluster type is $setup_type${NC}"
         check_operator_based
         check_kube_config
         check_kubeVersion
         check_cluster_pod_cidr
         check_kubeapiserver_status
         check_calico_pods
+	copy_logs
         display_summary
 fi
 

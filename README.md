@@ -1,22 +1,24 @@
 # calico-config-check
-Tool for verifying Calico Enterprise installation and configuration
+Tool for verifying Calico Enterprise installation, configuration and telemetry data.
 
 ## Prerequistes
 Bash. 
 
 
 ## How to use
- 1. Clone or unzip the repository.
- 2. Make sure your .kube/config is present in $HOME, else change the `kubeconfig` variable in script to point to desrired location.
- 3. You can directly run the script `./calico-cluster-check.sh` from the cloned/unzipped directory.
- 
- 
+
+ 1. Clone the repository
+ 2. Make sure your .kube/config is present in $HOME.
+ 3. You can directly run the script `./calico-cluster-check.sh`.
+
+
+
 ## How to run
 
 ```
 ./calico-cluster-check.sh | tee execution_summary
-
 ```
+
 
 ### Checks performed
 
@@ -39,6 +41,7 @@ check_tigera_pods
 check_tier
 calico_diagnostics
 copy_logs
+calico_telemetry
 display_summary
 ```
 
