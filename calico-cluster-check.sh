@@ -20,6 +20,8 @@ setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"
 currdate=`date "+%Y.%m.%d-%H.%M.%S"`
 if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
 
+if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
+
 cluster_guid=`kubectl get clusterinformations.crd.projectcalico.org default -oyaml | grep "[^f:]clusterGUID:" | awk '{print $2}'`
 echo -e "${GREEN}The Cluster GUID is ${cluster_guid} ${NC}"
 echo -e "\n"
@@ -320,7 +322,7 @@ function check_calico_pods {
                         echo -e "calico-node deamonset is up to date, desired pods are $desired_pod_count and current pods are $current_pod_count"
                         success_array+=("$GREEN calico-node deamonset is up to date $NC")
                 else
-                        echo -e "$RED calico-node deamonset is not up to date"
+                        echo -e "$RED calico-node deamonset is not up to date${NC}"
 			kubectl get ds -n calico-system calico-node
                         failure_array+=("$RED calico-node deamonset is not up to date $NC")
 			kubectl get ds -n calico-system calico-node >> /tmp/execution_output
@@ -345,7 +347,24 @@ function check_calico_pods {
                 then
                         rm calico_node_error_logs
 		fi
-		echo -e "calico-node logs will be present at ${calico_diagnostics_dir}/per-node-calico-logs once script execution completes"
+		if [ "$setup_type" == "Calico Enterprise" ]
+		then
+			echo -e "calico-node logs will be present at ${calico_diagnostics_dir}/per-node-calico-logs once script execution completes"
+		elif [ "$setup_type" == "Calico" ]
+		then
+			        echo -e "---------------------------------------------"
+        			echo -e "${YELLOW} Collecting per-node calico-node logs... ${NC}"
+        			mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs
+        			for node in $(kubectl get pods -n calico-system -l k8s-app=calico-node -o go-template --template="{{range .items}}{{.metadata.name}} {{end}}"); do
+                			echo "Collecting logs for node: $node"
+                			mkdir -p ${calico_diagnostics_dir}/per-node-calico-logs/${node}
+                			kubectl logs --tail=${tail_lines} -n calico-system $node > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/${node}.log
+                			kubectl exec -n calico-system -t $node -- iptables-save -c > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iptables-save.txt
+                			kubectl exec -n calico-system -t $node -- ip route > ${calico_diagnostics_dir}/per-node-calico-logs/${node}/iproute.txt
+                		done
+        			echo -e "Logs present at ${calico_diagnostics_dir}/per-node-calico-logs"
+        			echo -e "---------------------------------------------"
+		fi
 
                 echo -e "\n"
 
@@ -469,8 +488,16 @@ function calico_diagnostics {
 }
 
 function copy_logs {
-	mkdir -p $currwd/calico-logs/calico-diagnostics
-        if [ -d $currwd/calico-logs/calico-diagnostics ]
+	if [ ! -d $currwd/calico-logs/calico-diagnostics ]
+	then
+		mkdir -p $currwd/calico-logs/calico-diagnostics
+	fi
+	if [ -d $currwd/calico-logs/calico-diagnostics ] && [ "$setup_type" == "Calico" ]
+	then
+                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
+		if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/commands-output; rm /tmp/execution_output; fi
+	fi
+        if [ -d $currwd/calico-logs/calico-diagnostics ] && [ "$setup_type" == "Calico Enterprise" ]
         then
                 if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
                 if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs $currwd/calico-logs/calico-diagnostics/tigera-manager-error.log; rm /tmp/tigera-manager_error_logs; fi
@@ -691,15 +718,15 @@ function display_summary {
         echo -e "---------Error Notes---------"
         ( IFS=$'\n'; echo -e  "${failure_array[*]}")
         echo -e "\n"
-        if [ "$setup_type" == "Calico Enterprise" ]
-        then
-                echo -e "---------------Note----------------"
-		echo -e "Logs are present in $currwd/calico-logs  directory"
-                echo -e "${YELLOW}${BOLD}Please send $currwd/calico-logs.tar.gz for Tigera team to investigate${NC}"
-                echo -e "\n"
-                if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/; fi
-	        tar -czvf calico-logs.tar.gz -P $currwd/calico-logs/ >> /dev/null
-	fi
+#        if [ "$setup_type" == "Calico Enterprise" ] || 
+#        then
+        echo -e "---------------Note----------------"
+	echo -e "Logs are present in $currwd/calico-logs  directory"
+        echo -e "${YELLOW}${BOLD}Please send $currwd/calico-logs.tar.gz for Tigera team to investigate${NC}"
+        echo -e "\n"
+        if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/; fi
+	tar -czvf calico-logs.tar.gz -P $currwd/calico-logs/ >> /dev/null
+#	fi
 
 }
 
@@ -731,6 +758,7 @@ else
         check_cluster_pod_cidr
         check_kubeapiserver_status
         check_calico_pods
+	copy_logs
         display_summary
 fi
 
