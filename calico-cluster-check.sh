@@ -533,7 +533,8 @@ function calico_telemetry {
 	echo -e "---------------------------------------------"
 	echo -e "${YELLOW} Collecting pods statistics... ${NC}"
 	mkdir -p ${calico_telemetry_dir}/pods
-	kubectl get pods --all-namespaces -o yaml > ${calico_telemetry_dir}/pods/pods-yaml.yaml
+	# Let us avoid getting all pod YAMLs and get only Tigera-specific pod YAMLs if needed.
+	#kubectl get pods --all-namespaces -o yaml > ${calico_telemetry_dir}/pods/pods-yaml.yaml
 	kubectl get pods --all-namespaces -o wide > ${calico_telemetry_dir}/pods/pods.txt
 	echo -e "Logs present at ${calico_telemetry_dir}/pods"
 	echo -e "---------------------------------------------"
@@ -566,7 +567,8 @@ function calico_telemetry {
 	echo -e "${YELLOW} Collecting configmaps statistics... ${NC}"
 	mkdir -p ${calico_telemetry_dir}/configmaps
 	kubectl get configmaps --all-namespaces  > ${calico_telemetry_dir}/configmaps/configmaps.txt
-	kubectl get configmaps --all-namespaces -o yaml > ${calico_telemetry_dir}/configmaps/configmaps.txt
+	# CMs may contain confidential info. Let us capture only Tigera specific CM if needed.
+	kubectl get configmaps --all-namespaces -o yaml > ${calico_telemetry_dir}/configmaps/configmaps-yaml.txt
 	echo -e "Logs present at ${calico_telemetry_dir}/configmaps"
 	echo -e "---------------------------------------------"
 
@@ -684,7 +686,7 @@ function calico_telemetry {
 	echo -e "---------------------------------------------"
 	echo -e "${YELLOW} Collecting networksets and global networksets data... ${NC}"
 	mkdir -p ${calico_telemetry_dir}/networksets
-	kubectl get networksets.projectcalico.org -o yaml > ${calico_telemetry_dir}/networksets/networksets.yaml
+	kubectl get networksets.projectcalico.org --all-namespaces -o yaml > ${calico_telemetry_dir}/networksets/networksets.yaml
 	kubectl get globalnetworksets.crd.projectcalico.org -o yaml > ${calico_telemetry_dir}/networksets/global-networksets.yaml
 	echo -e "Logs present at ${calico_telemetry_dir}/networksets"
 	echo -e "---------------------------------------------"
