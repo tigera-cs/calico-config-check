@@ -608,14 +608,17 @@ function calico_telemetry {
 	echo -e "${YELLOW} Collecting Tier information... ${NC}"
 	mkdir -p ${calico_telemetry_dir}/tiers
 	kubectl get tier.projectcalico.org -o yaml > ${calico_telemetry_dir}/tiers/tiers.yaml
+	tiers=`kubectl get tiers -o=custom-columns=NAME:.metadata.name --no-headers`
 	echo -e "Logs present at ${calico_telemetry_dir}/tiers"
 	echo -e "---------------------------------------------"
 
 	echo -e "---------------------------------------------"
 	echo -e "${YELLOW} Collecting network policy data for each tier... ${NC}"
 	mkdir -p ${calico_telemetry_dir}/network-policies
-	kubectl get networkpolicies.p -A -l projectcalico.org/tier==allow-tigera -o yaml > ${calico_telemetry_dir}/network-policies/allow-tigera-np.yaml
-	kubectl get networkpolicies.p -A -l projectcalico.org/tier==default -o yaml > ${calico_telemetry_dir}/network-policies/default-tier-np.yaml
+	for tier in $tiers
+	do 
+	   kubectl get networkpolicies.p -A -l projectcalico.org/tier==$tier -o yaml > ${calico_telemetry_dir}/network-policies/$tier-np.yaml
+	done
 	echo -e "Logs present at ${calico_telemetry_dir}/network-policies"
 	echo -e "---------------------------------------------"
 
