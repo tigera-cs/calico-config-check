@@ -39,7 +39,6 @@ check_apiserver_status
 check_calico_pods
 check_tigera_pods
 check_tier
-calico_diagnostics
 copy_logs
 calico_telemetry
 display_summary

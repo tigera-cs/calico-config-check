@@ -13,14 +13,14 @@ kubeconfig=$HOME/.kube/config
 failure_array=()
 success_array=()
 currwd=`pwd`
-calico_telemetry_dir=${currwd}/calico-logs/calico-telemetry
-calico_diagnostics_dir=${currwd}/calico-logs/calico-diagnostics
 tm_ns=`kubectl get pods -A | grep tigera-manager | awk '{print $1}'`
 setup_type=`if [[ "$tm_ns" == "tigera-manager" ]]; then echo "Calico Enterprise"; else echo "Calico"; fi`
-currdate=`date "+%Y.%m.%d-%H.%M.%S"`
-if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico Enterprise" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
+currdate=`date "+%Y-%m-%d-%H-%M-%S"`
+calico_logs=${currwd}/calico-logs_${currdate}
+calico_telemetry_dir=${currwd}/calico-logs_${currdate}/calico-telemetry
+calico_diagnostics_dir=${currwd}/calico-logs_${currdate}/calico-diagnostics
 
-if [ ! -d $currwd/calico-logs ] && [ "$setup_type" == "Calico" ]; then mkdir $currwd/calico-logs; elif [ -d $currwd/calico-logs ] && [ "$setup_type" == "Calico" ]; then mv $currwd/calico-logs $currwd/calico-logs_${currdate}; mkdir $currwd/calico-logs; fi
+mkdir ${calico_logs}
 
 cluster_guid=`kubectl get clusterinformations.crd.projectcalico.org default -oyaml | grep "[^f:]clusterGUID:" | awk '{print $2}'`
 echo -e "${GREEN}The Cluster GUID is ${cluster_guid} ${NC}"
@@ -337,8 +337,8 @@ function check_calico_pods {
                 if [ $? == 0 ]
                 then
                         cp calico_node_error_logs /tmp/
-                        echo -e "$RED Error logs found, logs present in file $currwd/calico-logs/calico-diagnostics/calico-node-error.log $NC"
-                        failure_array+=("$RED calico-node : Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/calico-node-error.log $NC")
+                        echo -e "$RED Error logs found, logs present in file ${calico_diagnostics_dir}/calico-node-error.log $NC"
+                        failure_array+=("$RED calico-node : Error logs found, logs will be present in file ${calico_diagnostics_dir}/calico-node-error.log $NC")
                         rm calico_node_error_logs
                 else
                         echo -e "No errors found in calico-node pods"
@@ -389,11 +389,11 @@ function check_tigera_pods {
                 if [ $? == 0 ]
                 then
                         cp ${i}_error_logs /tmp/
-                        echo -e "$RED Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/${i}_error_logs $NC"
-                        failure_array+=("$RED ${i} : Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/${i}-error.log $NC")
+                        echo -e "$RED Error logs found, logs will be present in file ${calico_diagnostics_dir}/${i}_error_logs $NC"
+                        failure_array+=("$RED ${i} : Error logs found, logs will be present in file ${calico_diagnostics_dir}/${i}-error.log $NC")
                         rm ${i}_error_logs
                 else
-                        echo -e "No errors found in ${i}, complete logs will be present at ${currwd}/calico-logs/calico-diagnostics/${i}.log"
+                        echo -e "No errors found in ${i}, complete logs will be present at ${calico_diagnostics_dir}/${i}.log"
                 fi
                 if [ -f tigera-manager_error_logs ]
                 then
@@ -418,11 +418,11 @@ function check_tigera_pods {
         if [ $? == 0 ]
         then
                 cp tigera_secure_error_logs /tmp/
-                echo -e "$RED Error logs found, logs present in file $currwd/calico-logs/calico-diagnostics/tigera-secure-error.log $NC"
-                failure_array+=("$RED tigera-secure : tigera-secure Error logs found, logs will be present in file $currwd/calico-logs/calico-diagnostics/tigera-secure-error.log $NC")
+                echo -e "$RED Error logs found, logs present in file ${calico_diagnostics_dir}/tigera-secure-error.log $NC"
+                failure_array+=("$RED tigera-secure : tigera-secure Error logs found, logs will be present in file ${calico_diagnostics_dir}/tigera-secure-error.log $NC")
                 rm tigera_secure_error_logs
         else
-                echo -e "No errors found in tigera_secure, complete logs will be present at  $currwd/calico-logs/calico-diagnostics/tigera-secure.log"
+                echo -e "No errors found in tigera_secure, complete logs will be present at  ${calico_diagnostics_dir}/tigera-secure.log"
         fi
         echo -e "\n"
         echo -e "-------tigera-fluentd pod status-------"
@@ -438,10 +438,10 @@ function check_tigera_pods {
         if [ $? == 0 ]
         then
                 cp fluentd_node_error_logs /tmp/
-                echo -e "$RED Error logs found, logs present in file $currwd/calico-logs/calico-diagnostics/fluentd-node-error.log $NC"
+                echo -e "$RED Error logs found, logs present in file ${calico_diagnostics_dir}/fluentd-node-error.log $NC"
                 rm fluentd_node_error_logs
         else
-                 echo -e "No errors found in fluentd-node pods, complete logs wil be present at $currwd/calico-logs/calico-diagnostics/fluentd-nodes.log"
+                 echo -e "No errors found in fluentd-node pods, complete logs wil be present at ${calico_diagnostics_dir}/fluentd-nodes.log"
         fi
         if [ -f tigera_secure_error_logs ]
         then
@@ -489,27 +489,27 @@ function calico_diagnostics {
 }
 
 function copy_logs {
-	if [ ! -d $currwd/calico-logs/calico-diagnostics ]
+	if [ ! -d ${calico_diagnostics_dir} ]
 	then
-		mkdir -p $currwd/calico-logs/calico-diagnostics
+		mkdir -p ${calico_diagnostics_dir}
 	fi
-	if [ -d $currwd/calico-logs/calico-diagnostics ] && [ "$setup_type" == "Calico" ]
+	if [ -d ${calico_diagnostics_dir} ] && [ "$setup_type" == "Calico" ]
 	then
-                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
-		if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/commands-output; rm /tmp/execution_output; fi
+                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs ${calico_diagnostics_dir}/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
+		if [ -f /tmp/execution_output ];  then cp /tmp/execution_output ${calico_diagnostics_dir}/commands-output; rm /tmp/execution_output; fi
 	fi
-        if [ -d $currwd/calico-logs/calico-diagnostics ] && [ "$setup_type" == "Calico Enterprise" ]
+        if [ -d ${calico_diagnostics_dir} ] && [ "$setup_type" == "Calico Enterprise" ]
         then
-                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs $currwd/calico-logs/calico-diagnostics/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
-                if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs $currwd/calico-logs/calico-diagnostics/tigera-manager-error.log; rm /tmp/tigera-manager_error_logs; fi
-                if [ -f /tmp/tigera-operator_error_logs ]; then cp /tmp/tigera-operator_error_logs $currwd/calico-logs/calico-diagnostics/tigera-operator-error.log; rm /tmp/tigera-operator_error_logs; fi
-                if [ -f /tmp/tigera_secure_error_logs ]; then cp /tmp/tigera_secure_error_logs $currwd/calico-logs/calico-diagnostics/tigera-secure-error.log; rm /tmp/tigera_secure_error_logs; fi
-                if [ -f /tmp/fluentd_node_error_logs ]; then cp /tmp/fluentd_node_error_logs $currwd/calico-logs/calico-diagnostics/fluentd-node-error.log; rm /tmp/fluentd_node_error_logs; fi
-                if [ -f /tmp/tigera_secure_logs ]; then cp /tmp/tigera_secure_logs $currwd/calico-logs/calico-diagnostics/tigera-secure.log; rm /tmp/tigera_secure_logs; fi
-                if [ -f /tmp/fluentd_node_logs ]; then cp /tmp/fluentd_node_logs $currwd/calico-logs/calico-diagnostics/fluentd-nodes.log; rm /tmp/fluentd_node_logs; fi
-                if [ -f /tmp/tigera-manager_logs ]; then cp /tmp/tigera-manager_logs $currwd/calico-logs/calico-diagnostics/tigera-manager.log; rm /tmp/tigera-manager_logs; fi
-                if [ -f /tmp/tigera-operator_logs ]; then cp /tmp/tigera-operator_logs $currwd/calico-logs/calico-diagnostics/tigera-operator.log; rm /tmp/tigera-operator_logs; fi
-                if [ -f /tmp/execution_output ];  then cp /tmp/execution_output $currwd/calico-logs/calico-diagnostics/commands-output; rm /tmp/execution_output; fi
+                if [ -f /tmp/calico_node_error_logs ]; then cp /tmp/calico_node_error_logs ${calico_diagnostics_dir}/calico-node-error.log; rm /tmp/calico_node_error_logs; fi
+                if [ -f /tmp/tigera-manager_error_logs ]; then cp /tmp/tigera-manager_error_logs ${calico_diagnostics_dir}/tigera-manager-error.log; rm /tmp/tigera-manager_error_logs; fi
+                if [ -f /tmp/tigera-operator_error_logs ]; then cp /tmp/tigera-operator_error_logs ${calico_diagnostics_dir}/tigera-operator-error.log; rm /tmp/tigera-operator_error_logs; fi
+                if [ -f /tmp/tigera_secure_error_logs ]; then cp /tmp/tigera_secure_error_logs ${calico_diagnostics_dir}/tigera-secure-error.log; rm /tmp/tigera_secure_error_logs; fi
+                if [ -f /tmp/fluentd_node_error_logs ]; then cp /tmp/fluentd_node_error_logs ${calico_diagnostics_dir}/fluentd-node-error.log; rm /tmp/fluentd_node_error_logs; fi
+                if [ -f /tmp/tigera_secure_logs ]; then cp /tmp/tigera_secure_logs ${calico_diagnostics_dir}/tigera-secure.log; rm /tmp/tigera_secure_logs; fi
+                if [ -f /tmp/fluentd_node_logs ]; then cp /tmp/fluentd_node_logs ${calico_diagnostics_dir}/fluentd-nodes.log; rm /tmp/fluentd_node_logs; fi
+                if [ -f /tmp/tigera-manager_logs ]; then cp /tmp/tigera-manager_logs ${calico_diagnostics_dir}/tigera-manager.log; rm /tmp/tigera-manager_logs; fi
+                if [ -f /tmp/tigera-operator_logs ]; then cp /tmp/tigera-operator_logs ${calico_diagnostics_dir}/tigera-operator.log; rm /tmp/tigera-operator_logs; fi
+                if [ -f /tmp/execution_output ];  then cp /tmp/execution_output ${calico_diagnostics_dir}/commands-output; rm /tmp/execution_output; fi
 
         fi
 
@@ -518,9 +518,9 @@ function copy_logs {
 
 
 function calico_telemetry {
-	if [ ! -d $currwd/calico-logs/calico-telemetry ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir $currwd/calico-logs/calico-telemetry; fi
-        calico_telemetry_dir=${currwd}/calico-logs/calico-telemetry
-	calico_diagnostics_dir=${currwd}/calico-logs/calico-diagnostics
+	if [ ! -d ${calico_telemetry_dir} ] && [ "$setup_type" == "Calico Enterprise" ]; then mkdir ${calico_telemetry_dir}; fi
+#        calico_telemetry_dir=${currwd}/calico-logs_${currdate}/calico-telemetry
+#	calico_diagnostics_dir=${currwd}/calico-logs_${currdate}/calico-diagnostics
 	echo -e "${YELLOW}==============Calico Telemetry collection==============${NC}"
 	echo -e "\n"
 	echo -e "---------------------------------------------"
@@ -727,11 +727,13 @@ function display_summary {
 #        if [ "$setup_type" == "Calico Enterprise" ] || 
 #        then
         echo -e "---------------Note----------------"
-	echo -e "Logs are present in $currwd/calico-logs  directory"
-        echo -e "${YELLOW}${BOLD}Please send $currwd/calico-logs.tar.gz for Tigera team to investigate${NC}"
+	echo -e "Logs are present in ${calico_logs}  directory"
+        echo -e "${YELLOW}${BOLD}Please send $currwd/calico-logs_${currdate}.tar.gz for Tigera team to investigate${NC}"
         echo -e "\n"
-        if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs/; fi
-	tar -czvf calico-logs.tar.gz -P $currwd/calico-logs/ >> /dev/null
+        if [ -f execution_summary ]; then mv execution_summary $currwd/calico-logs_${currdate}/; fi
+#	mv calico-logs calico-logs_${currdate}
+#	tar -czvf calico-logs.tar.gz -P $currwd/calico-logs/ >> /dev/null
+	tar -czvf calico-logs_${currdate}.tar.gz  calico-logs_${currdate} >> /dev/null
 #	fi
 
 }
@@ -752,7 +754,6 @@ then
         check_calico_pods
         check_tigera_pods
         check_tier
-#        calico_diagnostics
         copy_logs
 	calico_telemetry
         display_summary
