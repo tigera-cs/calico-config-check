@@ -56,7 +56,7 @@ nt $2}' | awk -F , '{print $1}'`
 
 function check_kube_config {
         echo -e "-------Checking and exporting kubconfig-------"
-        if [[ -v KUBECONFIG ]]
+        if [ -v KUBECONFIG ]
         then
                  echo -e "Using KUBECONFIG=$KUBECONFIG"
                  echo -e "\n"
