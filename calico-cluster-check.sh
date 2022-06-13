@@ -441,7 +441,7 @@ function check_tigera_pods {
                 echo -e "$RED Error logs found, logs present in file ${calico_diagnostics_dir}/fluentd-node-error.log $NC"
                 rm fluentd_node_error_logs
         else
-                 echo -e "No errors found in fluentd-node pods, complete logs wil be present at ${calico_diagnostics_dir}/fluentd-nodes.log"
+                echo -e "No errors found in fluentd-node pods, complete logs wil be present at ${calico_diagnostics_dir}/fluentd-nodes.log"
         fi
         if [ -f tigera_secure_error_logs ]
         then
@@ -467,25 +467,6 @@ function check_tier {
                 failure_array+=("$RED Check if tier allow-tigera is created $NC")
         fi
         echo -e "\n"
-}
-
-function calico_diagnostics {
-         echo -e "--------Calico Diagnostics----------"
-         if [ $(ls kubectl-calico | wc -l) -eq 1 ]
-         then
-                 curl -O https://docs.tigera.io/v2.8/maintenance/kubectl-calico -s
-                 chmod +x kubectl-calico
-                 ./kubectl-calico diags >> /dev/null
-                 latest_file=`ls -td -- /tmp/* | head -n 1`
-#                 if [ -d $currwd/calico-logs/calico-diagnostics ]; then rm -rf $currwd/calico-logs/calico-diagnostics; fi
-                 cp -R $latest_file/calico-diagnostics $currwd/calico-logs/.
-                 echo "Diagnostic bundle produced at $currwd/calico-logs"
-                 echo -e "\n"
-         else
-                 echo "Please make sure kubectl-calico binary exist at $currwd"
-                 failure_array+=("$RED Please make sure kubectl-calico binary exist at $currwd $NC")
-                 echo -e "\n"
-         fi
 }
 
 function copy_logs {
